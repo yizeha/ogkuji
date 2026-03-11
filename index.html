@@ -17,10 +17,13 @@
       <div class="topbar-left"></div>
 
       <div class="topbar-center">
-        <img class="top-logo" id="topLogo"
-             src="./assets/logo_top.png"
-             alt="로고"
-             onerror="this.style.display='none';" />
+        <img
+          class="top-logo"
+          id="topLogo"
+          src="./assets/logo_top.png"
+          alt="로고"
+          onerror="this.style.display='none';"
+        />
       </div>
 
       <div class="topbar-right">
@@ -60,15 +63,15 @@
 
       <!-- CENTER -->
       <main class="panel center">
-
-        <!-- 상단 정보 -->
         <div class="boardbar">
           <div class="boardbar-left">
-            <img class="board-logo" id="boardLogo"
-                 src="./assets/logo_board.png"
-                 alt="로고"
-                 onerror="this.style.display='none';" />
-
+            <img
+              class="board-logo"
+              id="boardLogo"
+              src="./assets/logo_board.png"
+              alt="로고"
+              onerror="this.style.display='none';"
+            />
             <div class="board-title" id="kujiTitleText">오지상 쿠지</div>
           </div>
 
@@ -79,12 +82,11 @@
             </div>
             <div class="info-pill">
               <span class="info-label">입금 계좌</span>
-              <span class="info-value mono" id="accountText">토스뱅크 1001-3456-7725</span>
+              <span class="info-value mono" id="accountText">기업은행 153-084786-01019 양*준</span>
             </div>
           </div>
         </div>
 
-        <!-- 진행 게이지 -->
         <div class="progressrow">
           <div class="progress-left">
             <div class="progress-outer">
@@ -99,9 +101,7 @@
           </div>
         </div>
 
-        <!-- 보드 -->
         <div class="board" id="board"></div>
-
       </main>
 
       <!-- RIGHT -->
@@ -127,41 +127,110 @@
 
       <div class="admin-body">
 
-        <div class="admin-row">
-          <div class="field">
-            <label>쿠지명</label>
-            <input class="input" id="kujiTitleInput" placeholder="예: 오지상 쿠지" />
-          </div>
-          <div class="field buttons">
-            <button class="btn ok" id="btnApplyTitle" type="button">적용</button>
+        <!-- 상품 추가 -->
+        <div class="admin-section">
+          <div class="admin-section-title">상품 추가</div>
+
+          <div class="admin-col">
+            <div class="field">
+              <label for="prizeNameInput">상품 이름</label>
+              <input
+                class="input"
+                id="prizeNameInput"
+                type="text"
+                placeholder="예: 피규어"
+              />
+            </div>
+
+            <div class="field">
+              <label for="prizeLabelInput">등급</label>
+              <input
+                class="input"
+                id="prizeLabelInput"
+                type="text"
+                placeholder="예: A상"
+              />
+            </div>
+
+            <div class="field">
+              <label for="prizeStockInput">수량</label>
+              <input
+                class="input"
+                id="prizeStockInput"
+                type="number"
+                min="1"
+                step="1"
+                value="1"
+              />
+            </div>
+
+            <div class="field">
+              <label for="prizeImgInput">이미지</label>
+              <input
+                class="input"
+                id="prizeImgInput"
+                type="file"
+                accept="image/*"
+              />
+            </div>
+
+            <div class="field buttons">
+              <button class="btn ok" id="btnAddPrize" type="button">상품 추가</button>
+            </div>
           </div>
         </div>
 
-        <div class="admin-row">
-          <div class="field small">
-            <label>전체 뽑기 수</label>
-            <input class="input" id="totalTicketsInput" type="number" min="1" step="1" value="30" />
-          </div>
-          <div class="field buttons">
-            <button class="btn ok" id="btnApplyTickets" type="button">적용</button>
+        <!-- 기본 설정 -->
+        <div class="admin-section">
+          <div class="admin-section-title">기본 설정</div>
+
+          <div class="admin-col">
+            <div class="field">
+              <label for="kujiTitleInput">쿠지명</label>
+              <input
+                class="input"
+                id="kujiTitleInput"
+                type="text"
+                placeholder="예: 오지상 쿠지"
+              />
+            </div>
+
+            <div class="field buttons">
+              <button class="btn ok" id="btnApplyTitle" type="button">적용</button>
+            </div>
+
+            <div class="field">
+              <label for="totalTicketsInput">전체 뽑기 수</label>
+              <input
+                class="input"
+                id="totalTicketsInput"
+                type="number"
+                min="1"
+                step="1"
+                value="30"
+              />
+            </div>
+
+            <div class="field buttons">
+              <button class="btn ok" id="btnApplyTickets" type="button">적용</button>
+            </div>
           </div>
         </div>
-
-        <div class="admin-row">
-          <button class="btn primary" id="btnUndo" type="button">되돌리기</button>
-          <button class="btn" id="btnSave" type="button">저장</button>
-          <button class="btn" id="btnLoad" type="button">불러오기</button>
-          <button class="btn danger" id="btnReset" type="button">전체 초기화</button>
+                <!-- 관리자 상품 목록 -->
+        <div class="admin-section">
+          <div class="admin-section-title">현재 상품 목록</div>
+          <div class="admin-prize-manage-list" id="adminPrizeList"></div>
         </div>
 
-        <div class="admin-row">
-          <div class="field grow">
-            <label>상품 설정(JSON)</label>
-            <textarea class="textarea" id="prizeEditor" spellcheck="false"></textarea>
-            <div class="hint">수정 후 “적용”을 누르면 목록이 반영됩니다.</div>
-          </div>
-          <div class="field buttons">
-            <button class="btn ok" id="btnApplyPrizes" type="button">적용</button>
+        <!-- 관리 버튼 -->
+        <div class="admin-section">
+          <div class="admin-section-title">관리</div>
+
+          <div class="admin-action-grid">
+            <button class="btn primary" id="btnUndo" type="button">되돌리기</button>
+            <button class="btn" id="btnSave" type="button">저장</button>
+            <button class="btn" id="btnLoad" type="button">불러오기</button>
+            <button class="btn danger" id="btnReset" type="button">전체 초기화</button>
           </div>
         </div>
 
@@ -173,7 +242,7 @@
 
   </div>
 
-  <!-- ===== Draw Modal (단 1개만 존재) ===== -->
+  <!-- Draw Modal -->
   <div class="modal" id="drawModal" aria-hidden="true">
     <div class="modal-backdrop" id="modalBackdrop"></div>
 
@@ -215,8 +284,6 @@
     </div>
   </div>
 
-  <!-- JS는 항상 맨 아래 -->
   <script src="./app.js"></script>
-
 </body>
 </html>

@@ -1,3 +1,4 @@
+
 (() => {
   const $ = (sel, el = document) => el.querySelector(sel);
 
@@ -7,22 +8,35 @@
   const CONFIG = {
     defaultTotalTickets: 30,
     flashyTierMax: 3,
-
-    // [IMAGE] 뽑기 카드 이미지
     paperImage: "./assets/paper.png",
-
-    // [IMAGE] 결과 커버 종이 이미지(뜯김)
     coverPaperImage: "./assets/paper.png",
-
-    // [IMAGE] 빈 결과 이미지
     emptyResultImage: "./assets/empty.png",
-
-    // [AUDIO] 빵빠레(mp3 없으면 false)
     useFanfare: true,
-
-    LS_KEY: "kuji_broadcast_modal_v1",
+    LS_KEY: "kuji_broadcast_modal_v2",
     drawDelayMs: 1100,
   };
+
+  // =========================
+  // DEFAULTS
+  // =========================
+  function createDefaultOjiPrize() {
+    return {
+      id: "OJI",
+      tier: 99,
+      label: "오지상",
+      name: "(굿즈 or 마일리지)",
+      stock: 99999,
+      total: 99999,
+      img: "./assets/oji_goods.png",
+    };
+  }
+
+  function createDefaultSettings() {
+    return {
+      totalTickets: CONFIG.defaultTotalTickets,
+      kujiTitle: "오지상 쿠지",
+    };
+  }
 
   // =========================
   // STATE
@@ -35,16 +49,8 @@
     history: [],
     queue: [],
     drawDeck: [],
-    settings: {
-      totalTickets: CONFIG.defaultTotalTickets,
-      kujiTitle: "오지상 쿠지",
-    },
-    prizes: [
-      { id: "A", tier: 1, label: "A상", name: "피규어", stock: 1, total: 1, img: "./assets/prizeA.png" },
-      { id: "B", tier: 2, label: "B상", name: "굿즈", stock: 2, total: 2, img: "./assets/prizeB.png" },
-      { id: "C", tier: 3, label: "C상", name: "굿즈", stock: 3, total: 3, img: "./assets/prizeC.png" },
-      { id: "OJI", tier: 99, label: "오지상", name: "오지상", stock: 99999, total: 99999, img: "./assets/oji_goods.png" },
-    ],
+    settings: createDefaultSettings(),
+    prizes: [createDefaultOjiPrize()],
   };
 
   // =========================
@@ -64,41 +70,62 @@
     };
   }
 
+  function normalizePrize(p) {
+    return {
+      id: p.id,
+      tier: Number.isFinite(Number(p.tier)) ? Number(p.tier) : 999,
+      label: String(p.label || "").trim() || "기타",
+      name: String(p.name || "").trim() || "상품",
+      stock: Math.max(0, Number(p.stock) || 0),
+      total: typeof p.total === "number" ? p.total : Math.max(0, Number(p.stock) || 0),
+      img: p.img || CONFIG.emptyResultImage,
+    };
+  }
+
   function importState(payload) {
     state.mode = payload?.mode || "broadcast";
     state.used = payload?.used || {};
     state.selected = payload?.selected ?? null;
     state.logs = Array.isArray(payload?.logs) ? payload.logs : [];
     state.queue = Array.isArray(payload?.queue) ? payload.queue : [];
+    state.history = [];
 
-    state.settings = payload?.settings || { totalTickets: CONFIG.defaultTotalTickets, kujiTitle: "오지상 쿠지" };
+    state.settings = payload?.settings || createDefaultSettings();
     if (!Number.isFinite(state.settings.totalTickets) || state.settings.totalTickets < 1) {
       state.settings.totalTickets = CONFIG.defaultTotalTickets;
     }
-    if (!state.settings.kujiTitle) state.settings.kujiTitle = "오지상 쿠지";
+    if (!state.settings.kujiTitle) {
+      state.settings.kujiTitle = "오지상 쿠지";
+    }
 
     if (Array.isArray(payload?.prizes) && payload.prizes.length > 0) {
-      state.prizes = payload.prizes.map(p => ({
-        ...p,
-        total: (typeof p.total === "number") ? p.total : p.stock
-      }));
+      state.prizes = payload.prizes.map(normalizePrize);
+    } else {
+      state.prizes = [createDefaultOjiPrize()];
     }
 
-    if (!state.prizes.find(p => p.id === "OJI")) {
-      state.prizes.push({ id: "OJI", tier: 99, label: "오지상", name: "오지상", stock: 99999, total: 99999, img: "./assets/oji_goods.png" });
+    if (!state.prizes.find((p) => p.id === "OJI")) {
+      state.prizes.push(createDefaultOjiPrize());
     }
+
+    state.prizes.sort((a, b) => a.tier - b.tier);
   }
 
   function saveLocal() {
-    try { localStorage.setItem(CONFIG.LS_KEY, JSON.stringify(exportState())); } catch {}
+    try {
+      localStorage.setItem(CONFIG.LS_KEY, JSON.stringify(exportState()));
+    } catch {}
   }
+
   function saveLocalDebounced() {
     clearTimeout(saveTimer);
     saveTimer = setTimeout(saveLocal, 200);
   }
+
   function loadLocal() {
     const raw = localStorage.getItem(CONFIG.LS_KEY);
     if (!raw) return false;
+
     try {
       importState(JSON.parse(raw));
       return true;
@@ -132,22 +159,24 @@
   const kujiTitleInput = $("#kujiTitleInput");
   const btnApplyTitle = $("#btnApplyTitle");
 
-  const prizeEditor = $("#prizeEditor");
-  const btnApplyPrizes = $("#btnApplyPrizes");
-
   const queueInput = $("#queueInput");
   const btnAddQueue = $("#btnAddQueue");
   const queueList = $("#queueList");
 
   const fanfare = $("#fanfare");
 
-  // Progress
+  const prizeNameInput = $("#prizeNameInput");
+  const prizeLabelInput = $("#prizeLabelInput");
+  const prizeStockInput = $("#prizeStockInput");
+  const prizeImgInput = $("#prizeImgInput");
+  const btnAddPrize = $("#btnAddPrize");
+  const adminPrizeList = $("#adminPrizeList");
+
   const progressInner = $("#progressInner");
   const progressPercent = $("#progressPercent");
   const openedCount = $("#openedCount");
   const totalCount = $("#totalCount");
 
-  // Modal
   const drawModal = $("#drawModal");
   const modalBackdrop = $("#modalBackdrop");
   const modalClose = $("#modalClose");
@@ -163,17 +192,20 @@
   const modalLoading = $("#modalLoading");
   const modalConfetti = $("#modalConfetti");
 
-  // Safety: 이미지 로드 실패해도 동작 멈추지 않게
   if (modalResultImg) {
-    modalResultImg.onerror = () => { modalResultImg.src = CONFIG.emptyResultImage; };
+    modalResultImg.onerror = () => {
+      modalResultImg.src = CONFIG.emptyResultImage;
+    };
   }
 
   // =========================
-  // FX CSS (네온/특수효과)
+  // FX CSS
   // =========================
   injectFxCss();
+
   function injectFxCss() {
     if (document.querySelector('style[data-kuji-fx="1"]')) return;
+
     const css = `
       .modal-card{ transition: box-shadow .35s ease, border-color .35s ease, background .35s ease; }
       .modal-card.fx-gold{
@@ -237,7 +269,8 @@
       .confetti{
         position:absolute;
         top:-12px;
-        width:8px; height:14px;
+        width:8px;
+        height:14px;
         border-radius:3px;
         animation: confFall 900ms ease-in forwards;
         opacity:.95;
@@ -247,6 +280,7 @@
         100%{transform: translateY(260px) rotate(260deg); opacity:0;}
       }
     `;
+
     const style = document.createElement("style");
     style.setAttribute("data-kuji-fx", "1");
     style.textContent = css;
@@ -259,13 +293,23 @@
   btnToggleMode?.addEventListener("click", () => {
     setMode(state.mode === "broadcast" ? "admin" : "broadcast");
   });
-  btnCloseAdmin?.addEventListener("click", () => setMode("broadcast"));
+
+  btnCloseAdmin?.addEventListener("click", () => {
+    setMode("broadcast");
+  });
 
   function setMode(mode) {
     state.mode = mode;
     document.body.setAttribute("data-mode", mode);
-    if (btnToggleMode) btnToggleMode.textContent = (mode === "broadcast") ? "방송 모드" : "관리자 모드";
-    if (adminPanel) adminPanel.classList.toggle("show", mode === "admin");
+
+    if (btnToggleMode) {
+      btnToggleMode.textContent = mode === "broadcast" ? "방송 모드" : "관리자 모드";
+    }
+
+    if (adminPanel) {
+      adminPanel.classList.toggle("show", mode === "admin");
+    }
+
     saveLocalDebounced();
   }
 
@@ -274,9 +318,11 @@
       e.preventDefault();
       setMode(state.mode === "broadcast" ? "admin" : "broadcast");
     }
+
     if ((e.key === "r" || e.key === "R") && state.mode === "admin") {
       resetAll();
     }
+
     if ((e.key === "u" || e.key === "U") && state.mode === "admin") {
       undo();
     }
@@ -286,7 +332,12 @@
   // Admin buttons
   // =========================
   btnReset?.addEventListener("click", resetAll);
-  btnSave?.addEventListener("click", () => { saveLocal(); alert("저장되었습니다."); });
+
+  btnSave?.addEventListener("click", () => {
+    saveLocal();
+    alert("저장되었습니다.");
+  });
+
   btnLoad?.addEventListener("click", () => {
     const ok = loadLocal();
     pruneToTotal(state.settings.totalTickets);
@@ -295,99 +346,27 @@
     renderAll();
     alert(ok ? "불러오기 완료" : "저장된 데이터가 없습니다.");
   });
+
   btnUndo?.addEventListener("click", undo);
 
-  function pushHistory() {
-    try {
-      state.history.push(JSON.stringify(exportState()));
-      if (state.history.length > 50) state.history.shift();
-    } catch {}
-  }
-
-  function resetAll() {
-    if (!confirm("전체 초기화를 진행할까요? (사용 번호/결과/대기열/덱이 초기화됩니다)")) return;
-
-    state.used = {};
-    state.selected = null;
-    state.logs = [];
-    state.queue = [];
-    state.history = [];
-
-    // 재고 원복(오지상은 매우 큰 값 유지)
-    state.prizes = state.prizes.map(p => ({
-      ...p,
-      total: (typeof p.total === "number") ? p.total : p.stock,
-      stock: (p.id === "OJI") ? 99999 : ((typeof p.total === "number") ? p.total : p.stock),
-    }));
-
-    rebuildDeck();
-    buildBoard(state.settings.totalTickets);
-    renderAll();
-    saveLocal();
-  }
-
-  function undo() {
-    const snap = state.history.pop();
-    if (!snap) { alert("되돌릴 내용이 없습니다."); return; }
-    importState(JSON.parse(snap));
-    pruneToTotal(state.settings.totalTickets);
-    rebuildDeck();
-    buildBoard(state.settings.totalTickets);
-    renderAll();
-    saveLocalDebounced();
-  }
-
-  // =========================
-  // Deck
-  // =========================
-  function rebuildDeck() {
-    const total = state.settings.totalTickets;
-    const deck = [];
-
-    // 고위상 먼저
-    state.prizes.forEach(p => {
-      if (p.id === "OJI") return;
-      const cnt = Math.max(0, Number(p.stock) || 0);
-      for (let i = 0; i < cnt; i++) deck.push(p.id);
-    });
-
-    // ✅ total 초과 컷(중요)
-    if (deck.length > total) deck.length = total;
-
-    // 나머지 오지상 채움
-    const remain = total - deck.length;
-    for (let i = 0; i < remain; i++) deck.push("OJI");
-
-    // 셔플
-    for (let i = deck.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [deck[i], deck[j]] = [deck[j], deck[i]];
-    }
-
-    state.drawDeck = deck;
-  }
-
-  function pickPrizeFromDeck() {
-    if (!Array.isArray(state.drawDeck) || state.drawDeck.length <= 0) return null;
-    const id = state.drawDeck.pop();
-    return state.prizes.find(p => p.id === id) || null;
-  }
-
-  // =========================
-  // Admin: Title / Tickets / Prizes
-  // =========================
   btnApplyTitle?.addEventListener("click", () => {
     const t = (kujiTitleInput?.value || "").trim();
-    if (!t) return alert("쿠지명을 입력하세요.");
+    if (!t) {
+      alert("쿠지명을 입력하세요.");
+      return;
+    }
+
     pushHistory();
     state.settings.kujiTitle = t;
-    kujiTitleText && (kujiTitleText.textContent = t);
+    if (kujiTitleText) kujiTitleText.textContent = t;
+
     saveLocalDebounced();
     alert("쿠지명이 적용되었습니다.");
   });
 
   btnApplyTickets?.addEventListener("click", () => {
     const n = Number(totalTicketsInput?.value);
+
     if (!Number.isFinite(n) || n < 1 || n > 500) {
       alert("전체 뽑기 수는 1~500 사이의 숫자로 입력하세요.");
       if (totalTicketsInput) totalTicketsInput.value = String(state.settings.totalTickets);
@@ -402,68 +381,202 @@
     buildBoard(state.settings.totalTickets);
     renderAll();
     saveLocalDebounced();
+
     alert("전체 뽑기 수가 적용되었습니다.");
   });
 
-  btnApplyPrizes?.addEventListener("click", () => {
+  btnAddPrize?.addEventListener("click", addPrize);
+
+  function pushHistory() {
     try {
-      const parsed = JSON.parse(prizeEditor?.value || "[]");
-      if (!Array.isArray(parsed)) throw new Error("상품 데이터는 배열이어야 합니다.");
+      state.history.push(JSON.stringify(exportState()));
+      if (state.history.length > 50) {
+        state.history.shift();
+      }
+    } catch {}
+  }
 
-      parsed.forEach(p => {
-        if (!p.id || typeof p.tier !== "number" || !p.label || !p.name || typeof p.stock !== "number") {
-          throw new Error("필수 필드(id, tier, label, name, stock)를 확인하세요.");
-        }
-      });
+  function resetAll() {
+    if (!confirm("전체 초기화를 진행할까요? 상품 목록은 오지상만 남기고 초기화됩니다.")) {
+      return;
+    }
 
+    state.used = {};
+    state.selected = null;
+    state.logs = [];
+    state.queue = [];
+    state.history = [];
+    state.prizes = [createDefaultOjiPrize()];
+
+    rebuildDeck();
+    buildBoard(state.settings.totalTickets);
+    renderAll();
+    saveLocal();
+  }
+
+  function undo() {
+    const snap = state.history.pop();
+    if (!snap) {
+      alert("되돌릴 내용이 없습니다.");
+      return;
+    }
+
+    importState(JSON.parse(snap));
+    pruneToTotal(state.settings.totalTickets);
+    rebuildDeck();
+    buildBoard(state.settings.totalTickets);
+    renderAll();
+    saveLocalDebounced();
+  }
+
+  // =========================
+  // Prize helpers
+  // =========================
+  function labelToTier(label) {
+    const raw = String(label || "").trim().toUpperCase();
+    const match = raw.match(/^([A-Z])/);
+    if (!match) return 999;
+    return match[1].charCodeAt(0) - 64;
+  }
+
+  function addPrize() {
+    const name = (prizeNameInput?.value || "").trim();
+    const label = (prizeLabelInput?.value || "").trim().toUpperCase();
+    const stock = Number(prizeStockInput?.value || 0);
+    const file = prizeImgInput?.files?.[0];
+
+    if (!name) {
+      alert("상품 이름을 입력하세요.");
+      return;
+    }
+
+    if (!label) {
+      alert("등급을 입력하세요. 예: A상");
+      return;
+    }
+
+    if (!Number.isFinite(stock) || stock < 1) {
+      alert("수량은 1 이상으로 입력하세요.");
+      return;
+    }
+
+    const finalize = (imgSrc) => {
       pushHistory();
 
-      state.prizes = parsed.map(p => ({
-        ...p,
-        total: (typeof p.total === "number") ? p.total : p.stock
-      }));
+      const newPrize = {
+        id: "P" + Date.now() + Math.random().toString(16).slice(2, 6),
+        tier: labelToTier(label),
+        label,
+        name,
+        stock,
+        total: stock,
+        img: imgSrc || CONFIG.emptyResultImage,
+      };
 
-      if (!state.prizes.find(p => p.id === "OJI")) {
-        state.prizes.push({ id: "OJI", tier: 99, label: "오지상", name: "오지상", stock: 99999, total: 99999, img: "./assets/oji_goods.png" });
-      }
+      state.prizes.push(newPrize);
+      state.prizes.sort((a, b) => a.tier - b.tier);
 
       rebuildDeck();
       renderAll();
       saveLocalDebounced();
-      alert("상품 설정이 적용되었습니다.");
-    } catch (err) {
-      alert("상품 JSON 오류: " + err.message);
+
+      if (prizeNameInput) prizeNameInput.value = "";
+      if (prizeLabelInput) prizeLabelInput.value = "";
+      if (prizeStockInput) prizeStockInput.value = "1";
+      if (prizeImgInput) prizeImgInput.value = "";
+
+      alert("상품이 추가되었습니다.");
+    };
+
+    if (!file) {
+      finalize(CONFIG.emptyResultImage);
+      return;
     }
-  });
+
+    const reader = new FileReader();
+    reader.onload = (e) => finalize(e.target.result);
+    reader.readAsDataURL(file);
+  }
 
   function pruneToTotal(total) {
     const nextUsed = {};
     for (const k of Object.keys(state.used)) {
       const num = Number(k);
-      if (Number.isFinite(num) && num >= 1 && num <= total) nextUsed[String(num)] = true;
+      if (Number.isFinite(num) && num >= 1 && num <= total) {
+        nextUsed[String(num)] = true;
+      }
     }
     state.used = nextUsed;
-    state.logs = state.logs.filter(l => l.number >= 1 && l.number <= total);
-    if (state.selected && (state.selected < 1 || state.selected > total)) state.selected = null;
+    state.logs = state.logs.filter((l) => l.number >= 1 && l.number <= total);
+
+    if (state.selected && (state.selected < 1 || state.selected > total)) {
+      state.selected = null;
+    }
+  }
+
+  // =========================
+  // Deck
+  // =========================
+  function rebuildDeck() {
+    const total = state.settings.totalTickets;
+    const deck = [];
+
+    state.prizes.forEach((p) => {
+      if (p.id === "OJI") return;
+      const cnt = Math.max(0, Number(p.stock) || 0);
+      for (let i = 0; i < cnt; i++) {
+        deck.push(p.id);
+      }
+    });
+
+    if (deck.length > total) {
+      deck.length = total;
+    }
+
+    const remain = total - deck.length;
+    for (let i = 0; i < remain; i++) {
+      deck.push("OJI");
+    }
+
+    for (let i = deck.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [deck[i], deck[j]] = [deck[j], deck[i]];
+    }
+
+    state.drawDeck = deck;
+  }
+
+  function pickPrizeFromDeck() {
+    if (!Array.isArray(state.drawDeck) || state.drawDeck.length <= 0) {
+      return null;
+    }
+    const id = state.drawDeck.pop();
+    return state.prizes.find((p) => p.id === id) || null;
   }
 
   // =========================
   // Queue
   // =========================
   btnAddQueue?.addEventListener("click", addQueue);
-  queueInput?.addEventListener("keydown", (e) => { if (e.key === "Enter") addQueue(); });
+  queueInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addQueue();
+  });
 
   function addQueue() {
     const name = (queueInput?.value || "").trim();
     if (!name) return;
+
     state.queue.push({ id: uid(), name });
     if (queueInput) queueInput.value = "";
+
     renderQueue();
     saveLocalDebounced();
   }
 
   function shiftQueue() {
-    if (state.queue.length > 0) state.queue.shift();
+    if (state.queue.length > 0) {
+      state.queue.shift();
+    }
     renderQueue();
     saveLocalDebounced();
   }
@@ -495,7 +608,7 @@
       rm.className = "queue-remove";
       rm.textContent = "삭제";
       rm.addEventListener("click", () => {
-        state.queue = state.queue.filter(x => x.id !== item.id);
+        state.queue = state.queue.filter((x) => x.id !== item.id);
         renderQueue();
         saveLocalDebounced();
       });
@@ -520,7 +633,7 @@
       btn.dataset.n = String(i);
 
       const img = document.createElement("img");
-      img.src = CONFIG.paperImage; // [IMAGE] 뽑기 카드 이미지
+      img.src = CONFIG.paperImage;
       img.alt = "뽑기 카드";
 
       const label = document.createElement("div");
@@ -540,12 +653,14 @@
 
       board.appendChild(btn);
     }
+
     renderBoardState();
   }
 
   function renderBoardState() {
     if (!board) return;
-    [...board.children].forEach(btn => {
+
+    [...board.children].forEach((btn) => {
       const n = btn.dataset.n;
       btn.classList.toggle("used", !!state.used[n]);
       btn.classList.toggle("selected", Number(n) === state.selected);
@@ -566,35 +681,141 @@
     state.prizes
       .slice()
       .sort((a, b) => a.tier - b.tier)
-      .forEach(p => {
+      .forEach((p) => {
         const card = document.createElement("div");
         card.className = "prizecard";
+
+        if (p.id !== "OJI") {
+          if (p.tier === 1) card.classList.add("tier-a");
+          if (p.tier === 2) card.classList.add("tier-b");
+          if (p.tier === 3) card.classList.add("tier-c");
+          if (p.tier === 4) card.classList.add("tier-d");
+          if (p.tier === 5) card.classList.add("tier-e");
+        }
+
+        if (p.stock === 1 && p.id !== "OJI") {
+          card.classList.add("lastone");
+        }
+
+        if (p.stock === 0 && p.id !== "OJI") {
+          card.classList.add("soldout");
+        }
 
         const head = document.createElement("div");
         head.className = "prizehead";
 
         const title = document.createElement("div");
         title.className = "prizetitle";
-        title.textContent = `${p.label} ${p.name}`;
+
+        const line1 = document.createElement("div");
+        line1.className = "tierline";
+
+        const tierDot = document.createElement("span");
+        tierDot.className = "tier-dot";
+
+        const tierText = document.createElement("span");
+        tierText.className = "tier-text";
+        tierText.textContent = p.label;
 
         const count = document.createElement("div");
         count.className = "prizecount";
-        const t = (typeof p.total === "number") ? p.total : p.stock;
-        count.textContent = `${Math.max(0, p.stock)}/${Math.max(0, t)}`;
+
+        const totalCountNum = typeof p.total === "number" ? p.total : p.stock;
+
+        if (p.id === "OJI") {
+          count.textContent = "";
+        } else {
+          count.innerHTML = `<span class="remain">${p.stock}</span><span class="slash">/</span><span class="total">${totalCountNum}</span>`;
+        }
+
+        line1.appendChild(tierDot);
+        line1.appendChild(tierText);
+        line1.appendChild(count);
+
+        const name = document.createElement("div");
+        name.className = "prizename";
+        name.textContent = p.name;
+
+        title.appendChild(line1);
+        title.appendChild(name);
 
         const img = document.createElement("img");
         img.className = "prizeimg";
-        img.src = p.img;
+        img.src = p.img || CONFIG.emptyResultImage;
         img.alt = p.name;
-        img.onerror = () => { img.src = CONFIG.emptyResultImage; };
+        img.onerror = () => {
+          img.src = CONFIG.emptyResultImage;
+        };
 
         head.appendChild(title);
-        head.appendChild(count);
         card.appendChild(head);
         card.appendChild(img);
 
         prizeList.appendChild(card);
       });
+  }
+
+  function renderAdminPrizeList() {
+    if (!adminPrizeList) return;
+    adminPrizeList.innerHTML = "";
+
+    const sorted = state.prizes.slice().sort((a, b) => a.tier - b.tier);
+
+    sorted.forEach((p) => {
+      const item = document.createElement("div");
+      item.className = "admin-prize-item";
+
+      const thumb = document.createElement("img");
+      thumb.className = "admin-prize-thumb";
+      thumb.src = p.img || CONFIG.emptyResultImage;
+      thumb.alt = p.name;
+      thumb.onerror = () => {
+        thumb.src = CONFIG.emptyResultImage;
+      };
+
+      const meta = document.createElement("div");
+      meta.className = "admin-prize-meta";
+
+      const title = document.createElement("div");
+      title.className = "admin-prize-title";
+      title.textContent = `${p.label} ${p.name}`;
+
+      const sub = document.createElement("div");
+      sub.className = "admin-prize-sub";
+      const totalCountNum = typeof p.total === "number" ? p.total : p.stock;
+      sub.textContent = `남은 수량 ${p.stock} / 총 ${totalCountNum}`;
+
+      meta.appendChild(title);
+      meta.appendChild(sub);
+
+      const del = document.createElement("button");
+      del.type = "button";
+      del.className = "admin-prize-delete";
+
+      if (p.id === "OJI") {
+        del.textContent = "기본";
+        del.disabled = true;
+        del.style.opacity = ".5";
+        del.style.cursor = "default";
+      } else {
+        del.textContent = "삭제";
+        del.addEventListener("click", () => {
+          if (!confirm(`${p.label} ${p.name} 상품을 삭제할까요?`)) return;
+
+          pushHistory();
+          state.prizes = state.prizes.filter((item) => item.id !== p.id);
+          rebuildDeck();
+          renderAll();
+          saveLocalDebounced();
+        });
+      }
+
+      item.appendChild(thumb);
+      item.appendChild(meta);
+      item.appendChild(del);
+
+      adminPrizeList.appendChild(item);
+    });
   }
 
   function renderWinList() {
@@ -616,7 +837,7 @@
       return b.ts - a.ts;
     });
 
-    sorted.slice(0, 40).forEach(item => {
+    sorted.slice(0, 40).forEach((item) => {
       const row = document.createElement("div");
       row.className = "winrow";
 
@@ -650,11 +871,6 @@
     });
   }
 
-  function syncPrizeEditor() {
-    if (!prizeEditor) return;
-    prizeEditor.value = JSON.stringify(state.prizes, null, 2);
-  }
-
   function renderProgress() {
     const total = state.settings.totalTickets;
     const opened = Object.keys(state.used).length;
@@ -669,9 +885,9 @@
   function renderAll() {
     renderBoardState();
     renderPrizes();
+    renderAdminPrizeList();
     renderWinList();
     renderQueue();
-    syncPrizeEditor();
     renderProgress();
 
     if (kujiTitleText) kujiTitleText.textContent = state.settings.kujiTitle;
@@ -692,20 +908,28 @@
 
   function closeModal() {
     if (!drawModal) return;
+
     drawModal.classList.remove("show");
     drawModal.style.display = "none";
     drawModal.setAttribute("aria-hidden", "true");
 
     const card = drawModal.querySelector(".modal-card");
     card?.classList.remove(
-      "peel", "reveal-text-on",
-      "fx-gold", "fx-purple", "fx-blue", "fx-green",
-      "fx-flash", "fx-shake", "fx-ripple"
+      "peel",
+      "reveal-text-on",
+      "fx-gold",
+      "fx-purple",
+      "fx-blue",
+      "fx-green",
+      "fx-flash",
+      "fx-shake",
+      "fx-ripple"
     );
 
     modalLoading?.classList.remove("active");
     modalReveal?.classList.remove("active");
     modalPaper?.classList.remove("active");
+
     if (modalConfetti) modalConfetti.innerHTML = "";
   }
 
@@ -718,6 +942,7 @@
     if (!card) return;
 
     card.classList.remove("fx-gold", "fx-purple", "fx-blue", "fx-green");
+
     if (tier === 1) card.classList.add("fx-gold");
     else if (tier === 2) card.classList.add("fx-purple");
     else if (tier === 3) card.classList.add("fx-blue");
@@ -768,6 +993,7 @@
 
   function playFanfare() {
     if (!CONFIG.useFanfare || !fanfare) return;
+
     try {
       fanfare.currentTime = 0;
       fanfare.play().catch(() => {});
@@ -795,40 +1021,45 @@
       modalConfetti.appendChild(c);
     }
 
-    setTimeout(() => { if (modalConfetti) modalConfetti.innerHTML = ""; }, 1500);
+    setTimeout(() => {
+      if (modalConfetti) modalConfetti.innerHTML = "";
+    }, 1500);
   }
 
   // =========================
   // Draw flow
   // =========================
   async function startDraw(number) {
-    console.log("[KUJI] startDraw", number, "modal?", !!drawModal);
-
     try {
       const nKey = String(number);
       if (state.used[nKey]) return;
 
-      if (!Array.isArray(state.drawDeck) || state.drawDeck.length <= 0) rebuildDeck();
+      if (!Array.isArray(state.drawDeck) || state.drawDeck.length <= 0) {
+        rebuildDeck();
+      }
 
       openModal();
 
-      modalTitle && (modalTitle.textContent = "추첨 중");
-      modalSub && (modalSub.textContent = "잠시만 기다려 주세요.");
+      if (modalTitle) modalTitle.textContent = "추첨 중";
+      if (modalSub) modalSub.textContent = "잠시만 기다려 주세요.";
       modalLoading?.classList.add("active");
 
       await sleep(CONFIG.drawDelayMs);
 
       const prize = pickPrizeFromDeck();
+
       if (!prize) {
         modalLoading?.classList.remove("active");
-        modalTitle && (modalTitle.textContent = "오류");
-        modalSub && (modalSub.textContent = "덱이 비어 있습니다.");
+        if (modalTitle) modalTitle.textContent = "오류";
+        if (modalSub) modalSub.textContent = "덱이 비어 있습니다.";
         return;
       }
 
-      if (prize.id !== "OJI") prize.stock = Math.max(0, prize.stock - 1);
-
       pushHistory();
+
+      if (prize.id !== "OJI") {
+        prize.stock = Math.max(0, prize.stock - 1);
+      }
 
       state.used[nKey] = true;
 
@@ -837,19 +1068,25 @@
       const log = {
         number,
         who,
-        prizeId: prize.id,
+        prizeId: prize.label,
         prizeName: `${prize.label} ${prize.name}`,
         tier: prize.tier,
-        time: new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit", second: "2-digit" }),
+        time: new Date().toLocaleTimeString("ko-KR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
         ts: Date.now(),
       };
+
       state.logs.push(log);
 
       modalLoading?.classList.remove("active");
-      modalTitle && (modalTitle.textContent = "결과 공개");
-      modalSub && (modalSub.textContent = log.prizeName);
+      if (modalTitle) modalTitle.textContent = "결과 공개";
+      if (modalSub) modalSub.textContent = log.prizeName;
 
       applyTierNeon(prize.tier);
+
       runModalPeelReveal({
         prizeName: log.prizeName,
         number,
@@ -857,7 +1094,7 @@
         prizeImg: prize.img || CONFIG.emptyResultImage,
       });
 
-      const isFlashy = (prize.id !== "OJI" && prize.tier <= CONFIG.flashyTierMax);
+      const isFlashy = prize.id !== "OJI" && prize.tier <= CONFIG.flashyTierMax;
       if (isFlashy) {
         applyTierSpecialFx(prize.tier);
         burstConfetti(52);
@@ -880,9 +1117,9 @@
   // =========================
   loadLocal();
 
-  kujiTitleText && (kujiTitleText.textContent = state.settings.kujiTitle);
-  kujiTitleInput && (kujiTitleInput.value = state.settings.kujiTitle);
-  totalTicketsInput && (totalTicketsInput.value = String(state.settings.totalTickets));
+  if (kujiTitleText) kujiTitleText.textContent = state.settings.kujiTitle;
+  if (kujiTitleInput) kujiTitleInput.value = state.settings.kujiTitle;
+  if (totalTicketsInput) totalTicketsInput.value = String(state.settings.totalTickets);
 
   setMode(state.mode || "broadcast");
 
@@ -895,9 +1132,16 @@
   // =========================
   // Utils
   // =========================
-  function sleep(ms) { return new Promise(res => setTimeout(res, ms)); }
+  function sleep(ms) {
+    return new Promise((res) => setTimeout(res, ms));
+  }
+
   function uid() {
-    try { return crypto.randomUUID(); }
-    catch { return String(Date.now()) + Math.random().toString(16).slice(2); }
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return String(Date.now()) + Math.random().toString(16).slice(2);
+    }
   }
 })();
+
