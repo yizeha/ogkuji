@@ -380,6 +380,7 @@ body{
 /* CENTER */
 .boardbar{
   display:flex;
+  overflow:visible;
   justify-content:space-between;
   align-items:center;
   padding: 12px 14px 10px;
@@ -394,18 +395,21 @@ body{
   min-width: 0;
 }
 .board-logo{
-  height: 34px;
+  height: 40px;
   width:auto;
   object-fit:contain;
   filter: drop-shadow(0 12px 28px rgba(0,0,0,.45));
 }
 .board-title{
-  font-weight: 950;
-  font-size: 15px;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 320px;
+  font-size: 36px;
+  font-weight: 900;
+  color: #fff3bf;
+
+  text-shadow:
+    0 0 4px rgba(255,255,255,.4),
+    0 0 12px rgba(255,220,120,.55),
+    0 0 22px rgba(255,180,60,.35),
+    0 6px 18px rgba(0,0,0,.85);
 }
 .boardbar-right{
   display:flex;
@@ -1432,4 +1436,157 @@ body[data-mode="broadcast"] .admin{
       0 0 30px rgba(255,80,180,.18),
       0 0 44px rgba(100,180,255,.12);
   }
+}
+.board-brand{
+  font-family:"Luckiest Guy",cursive;
+  font-size:28px;
+  color:#fff6c7;
+  text-shadow:
+    0 0 6px rgba(255,255,255,.15),
+    0 0 14px rgba(255,210,70,.2);
+}
+
+.board-title-wrap{
+  display:flex;
+  overflow:visible;
+  align-items:center;
+  gap:12px;
+}
+
+.info-pill{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  padding:10px 14px;
+  border-radius:16px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.05);
+}
+
+.info-pill-price{
+  border-color:rgba(255, 70, 163, 0.65);
+  background-color: rgba(255, 70, 163,.15);
+  box-shadow:0 0 12px rgba(255, 70, 163,.3);
+}
+
+.info-pill-account{
+  border-color:rgba(145, 120, 255, 0.65);
+  background-color: rgba(145, 120, 255,.15);
+  box-shadow:0 0 12px rgba(145, 120, 255,.3);
+}
+
+.info-label{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.info-value{
+  font-weight:900;
+  font-size:15px;
+}
+
+.progress-stats{
+  display:flex;
+  gap:8px;
+}
+
+.stat-chip{
+  display:flex;
+  align-items:center;
+  gap:6px;
+  padding:6px 10px;
+  border-radius:10px;
+  background:rgba(255,213,77,.05);
+  border:1px solid rgba(255,213,77,.1);
+}
+
+.stat-label{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.stat-value{
+  font-size:13px;
+  font-weight:900;
+}
+
+.controlbar{
+  display:flex;
+  justify-content:space-between;
+  align-items:center;
+  gap:12px;
+  padding:12px 14px;
+  border-bottom:1px solid var(--border);
+  background:rgba(255,180,60,.08);
+  flex-wrap:wrap;
+}
+
+.control-left{
+  display:flex;
+  align-items:center;
+  gap:16px;
+  flex-wrap:wrap;
+}
+
+.control-group{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.control-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  margin-left:auto;
+}
+
+.control-group{
+  display:flex;
+  align-items:center;
+  gap:8px;
+}
+
+.control-label{
+  font-size:12px;
+  color:var(--muted);
+}
+
+.control-input{
+  height:38px;
+  padding:0 10px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(0,0,0,.35);
+  color:#fff;
+}
+
+.control-input.small{
+  width:80px;
+}
+
+.control-actions{
+  display:flex;
+  gap:8px;
+}
+
+.control-btn{
+  height:38px;
+  padding:0 14px;
+  border-radius:10px;
+  border:1px solid rgba(255,255,255,.14);
+  background:rgba(255,255,255,.06);
+  color:#fff;
+  cursor:pointer;
+}
+
+.control-btn-primary{
+  background:rgba(255, 0, 170, 0.4);
+  border:1px solid rgba(255, 0, 170, 0.6);
+  box-shadow:0 0 14px rgba(255, 0, 170,.5);
+  padding-right: 20px;
+  padding-left: 20px;
+  padding-bottom: 4px;
+  font-weight: 600;
+  font-size: 22px;
 }
