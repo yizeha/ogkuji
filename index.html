@@ -17,14 +17,28 @@
       <div class="topbar-left"></div>
 
       <div class="topbar-center">
-        <img
-          class="top-logo"
-          id="topLogo"
-          src="./assets/logo_top.png"
-          alt="로고"
-          onerror="this.style.display='none';"
-        />
-      </div>
+  <div class="top-logo-wrap">
+    <div class="top-dots left">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+
+    <img
+      class="top-logo"
+      id="topLogo"
+      src="./assets/logo_top.png"
+      alt="로고"
+      onerror="this.style.display='none';"
+    />
+
+    <div class="top-dots right">
+      <span></span>
+      <span></span>
+      <span></span>
+    </div>
+  </div>
+</div>
 
       <div class="topbar-right">
         <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
@@ -179,7 +193,60 @@
             </div>
           </div>
         </div>
+        <!-- 라스트원 상품 설정 -->
+        <div class="admin-section">
+          <div class="admin-section-title">라스트원 상품 설정</div>
 
+          <div class="admin-col">
+            <div class="field">
+              <label for="lastOneNameInput">상품 이름</label>
+              <input
+                class="input"
+                id="lastOneNameInput"
+                type="text"
+                placeholder="예: 피규어"
+              />
+            </div>
+
+            <div class="field">
+              <label for="lastOneLabelInput">표시 라벨</label>
+              <input
+                class="input"
+                id="lastOneLabelInput"
+                type="text"
+                placeholder="예: LAST ONE"
+              />
+            </div>
+
+            <div class="field">
+              <label for="lastOneDescInput">설명</label>
+              <input
+                class="input"
+                id="lastOneDescInput"
+                type="text"
+                placeholder="예: 마지막 뽑기 오픈 시 지급"
+              />
+            </div>
+
+            <div class="field">
+              <label for="lastOneImgInput">이미지</label>
+              <input
+                class="input"
+                id="lastOneImgInput"
+                type="file"
+                accept="image/*"
+              />
+            </div>
+
+            <div class="field buttons">
+              <button class="btn ok" id="btnApplyLastOne" type="button">라스트원 적용</button>
+            </div>
+
+            <div class="field buttons">
+              <button class="btn danger" id="btnClearLastOne" type="button">라스트원 삭제</button>
+            </div>
+          </div>
+        </div>
         <!-- 기본 설정 -->
         <div class="admin-section">
           <div class="admin-section-title">기본 설정</div>

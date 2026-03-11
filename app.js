@@ -1,4 +1,3 @@
-
 (() => {
   const $ = (sel, el = document) => el.querySelector(sel);
 
@@ -35,6 +34,7 @@
     return {
       totalTickets: CONFIG.defaultTotalTickets,
       kujiTitle: "오지상 쿠지",
+      lastOnePrize: null,
     };
   }
 
@@ -82,6 +82,18 @@
     };
   }
 
+  function normalizeLastOnePrize(p) {
+    if (!p) return null;
+
+    return {
+      label: String(p.label || "").trim() || "LAST ONE",
+      name: String(p.name || "").trim() || "라스트원 상품",
+      desc: String(p.desc || "").trim() || "마지막 타일 오픈 시 보너스로 지급",
+      img: p.img || CONFIG.emptyResultImage,
+      claimed: !!p.claimed,
+    };
+  }
+
   function importState(payload) {
     state.mode = payload?.mode || "broadcast";
     state.used = payload?.used || {};
@@ -97,6 +109,7 @@
     if (!state.settings.kujiTitle) {
       state.settings.kujiTitle = "오지상 쿠지";
     }
+    state.settings.lastOnePrize = normalizeLastOnePrize(state.settings.lastOnePrize);
 
     if (Array.isArray(payload?.prizes) && payload.prizes.length > 0) {
       state.prizes = payload.prizes.map(normalizePrize);
@@ -171,6 +184,13 @@
   const prizeImgInput = $("#prizeImgInput");
   const btnAddPrize = $("#btnAddPrize");
   const adminPrizeList = $("#adminPrizeList");
+
+  const lastOneNameInput = $("#lastOneNameInput");
+  const lastOneLabelInput = $("#lastOneLabelInput");
+  const lastOneDescInput = $("#lastOneDescInput");
+  const lastOneImgInput = $("#lastOneImgInput");
+  const btnApplyLastOne = $("#btnApplyLastOne");
+  const btnClearLastOne = $("#btnClearLastOne");
 
   const progressInner = $("#progressInner");
   const progressPercent = $("#progressPercent");
@@ -386,6 +406,8 @@
   });
 
   btnAddPrize?.addEventListener("click", addPrize);
+  btnApplyLastOne?.addEventListener("click", applyLastOnePrize);
+  btnClearLastOne?.addEventListener("click", clearLastOnePrize);
 
   function pushHistory() {
     try {
@@ -407,6 +429,7 @@
     state.queue = [];
     state.history = [];
     state.prizes = [createDefaultOjiPrize()];
+    state.settings.lastOnePrize = null;
 
     rebuildDeck();
     buildBoard(state.settings.totalTickets);
@@ -496,6 +519,63 @@
     const reader = new FileReader();
     reader.onload = (e) => finalize(e.target.result);
     reader.readAsDataURL(file);
+  }
+
+  function applyLastOnePrize() {
+    const name = (lastOneNameInput?.value || "").trim();
+    const label = (lastOneLabelInput?.value || "").trim() || "LAST ONE";
+    const desc = (lastOneDescInput?.value || "").trim() || "마지막 타일 오픈 시 보너스로 지급";
+    const file = lastOneImgInput?.files?.[0];
+
+    if (!name) {
+      alert("라스트원 상품 이름을 입력하세요.");
+      return;
+    }
+
+    const finalize = (imgSrc) => {
+      pushHistory();
+
+      state.settings.lastOnePrize = {
+        label,
+        name,
+        desc,
+        img: imgSrc || state.settings.lastOnePrize?.img || CONFIG.emptyResultImage,
+        claimed: false,
+      };
+
+      renderAll();
+      saveLocalDebounced();
+      alert("라스트원 상품이 적용되었습니다.");
+    };
+
+    if (!file) {
+      finalize(state.settings.lastOnePrize?.img || CONFIG.emptyResultImage);
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (e) => finalize(e.target.result);
+    reader.readAsDataURL(file);
+  }
+
+  function clearLastOnePrize() {
+    if (!state.settings.lastOnePrize) {
+      alert("등록된 라스트원 상품이 없습니다.");
+      return;
+    }
+
+    if (!confirm("라스트원 상품을 삭제할까요?")) return;
+
+    pushHistory();
+    state.settings.lastOnePrize = null;
+
+    if (lastOneNameInput) lastOneNameInput.value = "";
+    if (lastOneLabelInput) lastOneLabelInput.value = "";
+    if (lastOneDescInput) lastOneDescInput.value = "";
+    if (lastOneImgInput) lastOneImgInput.value = "";
+
+    renderAll();
+    saveLocalDebounced();
   }
 
   function pruneToTotal(total) {
@@ -671,89 +751,152 @@
   // Lists
   // =========================
   function renderPrizes() {
-    if (!prizeList || !prizeSummary) return;
-    prizeList.innerHTML = "";
+  if (!prizeList || !prizeSummary) return;
+  prizeList.innerHTML = "";
 
-    const left = Array.isArray(state.drawDeck) ? state.drawDeck.length : 0;
-    const total = state.settings.totalTickets;
-    prizeSummary.textContent = `남은 수량 ${left} / 총 ${total}`;
+  const left = Array.isArray(state.drawDeck) ? state.drawDeck.length : 0;
+  const total = state.settings.totalTickets;
+  prizeSummary.textContent = `남은 수량 ${left} / 총 ${total}`;
 
-    state.prizes
-      .slice()
-      .sort((a, b) => a.tier - b.tier)
-      .forEach((p) => {
-        const card = document.createElement("div");
-        card.className = "prizecard";
+  // 라스트원 상품 먼저 표시
+  const lastOne = state.settings.lastOnePrize;
+  if (lastOne) {
+    const card = document.createElement("div");
+    card.className = "prizecard lastone-prize";
 
-        if (p.id !== "OJI") {
-          if (p.tier === 1) card.classList.add("tier-a");
-          if (p.tier === 2) card.classList.add("tier-b");
-          if (p.tier === 3) card.classList.add("tier-c");
-          if (p.tier === 4) card.classList.add("tier-d");
-          if (p.tier === 5) card.classList.add("tier-e");
-        }
+    if (lastOne.claimed) {
+      card.classList.add("claimed");
+    }
 
-        if (p.stock === 1 && p.id !== "OJI") {
-          card.classList.add("lastone");
-        }
+    const head = document.createElement("div");
+    head.className = "prizehead";
 
-        if (p.stock === 0 && p.id !== "OJI") {
-          card.classList.add("soldout");
-        }
+    const title = document.createElement("div");
+    title.className = "prizetitle";
 
-        const head = document.createElement("div");
-        head.className = "prizehead";
+    const line1 = document.createElement("div");
+    line1.className = "tierline";
 
-        const title = document.createElement("div");
-        title.className = "prizetitle";
+    const tierDot = document.createElement("span");
+    tierDot.className = "tier-dot lastone-dot";
 
-        const line1 = document.createElement("div");
-        line1.className = "tierline";
+    const tierText = document.createElement("span");
+    tierText.className = "tier-text";
+    tierText.textContent = lastOne.name;
 
-        const tierDot = document.createElement("span");
-        tierDot.className = "tier-dot";
+    line1.appendChild(tierDot);
+    line1.appendChild(tierText);
 
-        const tierText = document.createElement("span");
-        tierText.className = "tier-text";
-        tierText.textContent = p.label;
+    const desc = document.createElement("div");
+    desc.className = "lastone-desc";
+    desc.textContent = lastOne.desc || "마지막 뽑기 오픈 시 지급";
 
-        const count = document.createElement("div");
-        count.className = "prizecount";
+    title.appendChild(line1);
+    title.appendChild(desc);
+    head.appendChild(title);
 
-        const totalCountNum = typeof p.total === "number" ? p.total : p.stock;
+    const mediaWrap = document.createElement("div");
+    mediaWrap.className = "lastone-media";
 
-        if (p.id === "OJI") {
-          count.textContent = "";
-        } else {
-          count.innerHTML = `<span class="remain">${p.stock}</span><span class="slash">/</span><span class="total">${totalCountNum}</span>`;
-        }
+    const img = document.createElement("img");
+    img.className = "prizeimg";
+    img.src = lastOne.img || CONFIG.emptyResultImage;
+    img.alt = lastOne.name;
+    img.onerror = () => {
+      img.src = CONFIG.emptyResultImage;
+    };
 
-        line1.appendChild(tierDot);
-        line1.appendChild(tierText);
-        line1.appendChild(count);
+    const badge = document.createElement("div");
+    badge.className = "lastone-badge bottom-center";
+    badge.textContent = lastOne.label || "LAST ONE";
 
-        const name = document.createElement("div");
-        name.className = "prizename";
-        name.textContent = p.name;
+    mediaWrap.appendChild(img);
+    mediaWrap.appendChild(badge);
 
-        title.appendChild(line1);
-        title.appendChild(name);
+    card.appendChild(head);
+    card.appendChild(mediaWrap);
 
-        const img = document.createElement("img");
-        img.className = "prizeimg";
-        img.src = p.img || CONFIG.emptyResultImage;
-        img.alt = p.name;
-        img.onerror = () => {
-          img.src = CONFIG.emptyResultImage;
-        };
-
-        head.appendChild(title);
-        card.appendChild(head);
-        card.appendChild(img);
-
-        prizeList.appendChild(card);
-      });
+    prizeList.appendChild(card);
   }
+
+  // 일반 상품들
+  state.prizes
+    .slice()
+    .sort((a, b) => a.tier - b.tier)
+    .forEach((p) => {
+      const card = document.createElement("div");
+      card.className = "prizecard";
+
+      if (p.id !== "OJI") {
+        if (p.tier === 1) card.classList.add("tier-a");
+        if (p.tier === 2) card.classList.add("tier-b");
+        if (p.tier === 3) card.classList.add("tier-c");
+        if (p.tier === 4) card.classList.add("tier-d");
+        if (p.tier === 5) card.classList.add("tier-e");
+      }
+
+      if (p.stock === 1 && p.id !== "OJI") {
+        card.classList.add("lastone");
+      }
+
+      if (p.stock === 0 && p.id !== "OJI") {
+        card.classList.add("soldout");
+      }
+
+      const head = document.createElement("div");
+      head.className = "prizehead";
+
+      const title = document.createElement("div");
+      title.className = "prizetitle";
+
+      const line1 = document.createElement("div");
+      line1.className = "tierline";
+
+      const tierDot = document.createElement("span");
+      tierDot.className = "tier-dot";
+
+      const tierText = document.createElement("span");
+      tierText.className = "tier-text";
+      tierText.textContent = p.label;
+
+      const count = document.createElement("div");
+      count.className = "prizecount";
+
+      const totalCountNum = typeof p.total === "number" ? p.total : p.stock;
+
+      if (p.id === "OJI") {
+        count.textContent = "";
+      } else {
+        count.innerHTML = `<span class="remain">${p.stock}</span><span class="slash">/</span><span class="total">${totalCountNum}</span>`;
+      }
+
+      line1.appendChild(tierDot);
+      line1.appendChild(tierText);
+      line1.appendChild(count);
+
+      const name = document.createElement("div");
+      name.className = "prizename";
+      name.textContent = p.name;
+
+      title.appendChild(line1);
+      title.appendChild(name);
+
+      const img = document.createElement("img");
+      img.className = "prizeimg";
+      img.src = p.img || CONFIG.emptyResultImage;
+      img.alt = p.name;
+      img.onerror = () => {
+        img.src = CONFIG.emptyResultImage;
+      };
+
+      head.appendChild(title);
+      card.appendChild(head);
+      card.appendChild(img);
+
+      prizeList.appendChild(card);
+    });
+}
+
 
   function renderAdminPrizeList() {
     if (!adminPrizeList) return;
@@ -839,7 +982,11 @@
 
     sorted.slice(0, 40).forEach((item) => {
       const row = document.createElement("div");
-      row.className = "winrow";
+row.className = "winrow";
+
+if (item.tier <= 3) {
+  row.classList.add("tier-top");
+}
 
       const tier = document.createElement("div");
       tier.className = "wintier";
@@ -893,6 +1040,10 @@
     if (kujiTitleText) kujiTitleText.textContent = state.settings.kujiTitle;
     if (kujiTitleInput) kujiTitleInput.value = state.settings.kujiTitle;
     if (totalTicketsInput) totalTicketsInput.value = String(state.settings.totalTickets);
+
+    if (lastOneNameInput) lastOneNameInput.value = state.settings.lastOnePrize?.name || "";
+    if (lastOneLabelInput) lastOneLabelInput.value = state.settings.lastOnePrize?.label || "";
+    if (lastOneDescInput) lastOneDescInput.value = state.settings.lastOnePrize?.desc || "";
   }
 
   // =========================
@@ -1057,19 +1208,37 @@
 
       pushHistory();
 
+      const openedBefore = Object.keys(state.used).length;
+      const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
+
+      const lastOnePrize =
+        isLastDraw &&
+        state.settings.lastOnePrize &&
+        !state.settings.lastOnePrize.claimed
+          ? state.settings.lastOnePrize
+          : null;
+
       if (prize.id !== "OJI") {
         prize.stock = Math.max(0, prize.stock - 1);
+      }
+
+      if (lastOnePrize) {
+        lastOnePrize.claimed = true;
       }
 
       state.used[nKey] = true;
 
       const who = (state.queue?.[0]?.name || "참여자").trim() || "참여자";
 
+      const rewardText = lastOnePrize
+        ? `${prize.label} ${prize.name} + ${lastOnePrize.label} ${lastOnePrize.name}`
+        : `${prize.label} ${prize.name}`;
+
       const log = {
         number,
         who,
-        prizeId: prize.label,
-        prizeName: `${prize.label} ${prize.name}`,
+        prizeId: lastOnePrize ? `${prize.label} + ${lastOnePrize.label}` : prize.label,
+        prizeName: rewardText,
         tier: prize.tier,
         time: new Date().toLocaleTimeString("ko-KR", {
           hour: "2-digit",
@@ -1082,22 +1251,22 @@
       state.logs.push(log);
 
       modalLoading?.classList.remove("active");
-      if (modalTitle) modalTitle.textContent = "결과 공개";
-      if (modalSub) modalSub.textContent = log.prizeName;
+      if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
+      if (modalSub) modalSub.textContent = rewardText;
 
       applyTierNeon(prize.tier);
 
       runModalPeelReveal({
-        prizeName: log.prizeName,
+        prizeName: rewardText,
         number,
         who,
         prizeImg: prize.img || CONFIG.emptyResultImage,
       });
 
       const isFlashy = prize.id !== "OJI" && prize.tier <= CONFIG.flashyTierMax;
-      if (isFlashy) {
+      if (isFlashy || lastOnePrize) {
         applyTierSpecialFx(prize.tier);
-        burstConfetti(52);
+        burstConfetti(lastOnePrize ? 70 : 52);
         playFanfare();
       }
 
@@ -1144,4 +1313,3 @@
     }
   }
 })();
-
