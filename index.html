@@ -14,36 +14,44 @@
 
     <!-- 상단 -->
     <header class="topbar">
-      <div class="topbar-left"></div>
+  <div class="topbar-left">
+    <img
+      class="top-board-logo"
+      id="topBoardLogo"
+      src="./assets/logo_board.png"
+      alt="오지는쿠지 로고"
+      onerror="this.style.display='none';"
+    />
+  </div>
 
-      <div class="topbar-center">
-        <div class="top-logo-wrap">
-          <div class="top-dots left">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-
-          <img
-            class="top-logo"
-            id="topLogo"
-            src="./assets/logo_top.png"
-            alt="로고"
-            onerror="this.style.display='none';"
-          />
-
-          <div class="top-dots right">
-            <span></span>
-            <span></span>
-            <span></span>
-          </div>
-        </div>
+  <div class="topbar-center">
+    <div class="top-logo-wrap">
+      <div class="top-dots left">
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
 
-      <div class="topbar-right">
-        <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
+      <img
+        class="top-logo"
+        id="topLogo"
+        src="./assets/logo_top.png"
+        alt="로고"
+        onerror="this.style.display='none';"
+      />
+
+      <div class="top-dots right">
+        <span></span>
+        <span></span>
+        <span></span>
       </div>
-    </header>
+    </div>
+  </div>
+
+  <div class="topbar-right">
+    <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
+  </div>
+</header>
 
     <section class="layout">
 
@@ -55,8 +63,8 @@
         </div>
 
         <div class="left-split">
-          <div class="left-wins no-scroll">
-            <div class="winlist" id="winList"></div>
+<div class="left-wins">
+              <div class="winlist" id="winList"></div>
           </div>
 
           <div class="left-queue">
@@ -79,19 +87,10 @@
       <main class="panel center">
         <div class="boardbar">
           <div class="boardbar-left">
-            <img
-              class="board-logo"
-              id="boardLogo"
-              src="./assets/logo_board.png"
-              alt="로고"
-              onerror="this.style.display='none';"
-            />
-
-            <div class="board-title-wrap">
-              <div class="board-title" id="kujiTitleText">오지상 쿠지</div>
-            </div>
-          </div>
-
+  <div class="board-title-wrap">
+    <div class="board-title" id="kujiTitleText">오지상 쿠지</div>
+  </div>
+</div>
           <div class="boardbar-right">
             <div class="info-pill info-pill-price">
               <span class="info-label">1회 가격</span>
@@ -137,37 +136,37 @@
           </div>
         </div>
 
-<div class="controlbar">
-  <div class="control-left">
-    <div class="control-group nickname-group">
-      <label class="control-label" for="drawNicknameInput">닉네임</label>
-      <input
-        class="control-input"
-        id="drawNicknameInput"
-        type="text"
-        placeholder="참여자"
-      />
-    </div>
+        <div class="controlbar">
+          <div class="control-left">
+            <div class="control-group nickname-group">
+              <label class="control-label" for="drawNicknameInput">닉네임</label>
+              <input
+                class="control-input"
+                id="drawNicknameInput"
+                type="text"
+                placeholder="참여자"
+              />
+            </div>
 
-    <div class="control-group random-group">
-      <label class="control-label" for="randomCountInput">랜덤</label>
-      <input
-        class="control-input small"
-        id="randomCountInput"
-        type="number"
-        min="1"
-        step="1"
-        placeholder="장수"
-      />
-      <button class="control-btn" id="btnRandomPick" type="button">랜덤 선택</button>
-    </div>
-  </div>
+            <div class="control-group random-group">
+              <label class="control-label" for="randomCountInput">랜덤</label>
+              <input
+                class="control-input small"
+                id="randomCountInput"
+                type="number"
+                min="1"
+                step="1"
+                placeholder="장수"
+              />
+              <button class="control-btn" id="btnRandomPick" type="button">랜덤 선택</button>
+            </div>
+          </div>
 
-  <div class="control-actions">
-    <button class="control-btn" id="btnResetSelection" type="button">리셋</button>
-    <button class="control-btn control-btn-primary" id="btnOpenSelected" type="button">오픈 (0)</button>
-  </div>
-</div>
+          <div class="control-actions">
+            <button class="control-btn" id="btnResetSelection" type="button">리셋</button>
+            <button class="control-btn control-btn-primary" id="btnOpenSelected" type="button">오픈 (0)</button>
+          </div>
+        </div>
 
         <div class="board" id="board"></div>
       </main>
@@ -210,26 +209,29 @@
               />
             </div>
 
-            <div class="field">
-              <label for="prizeLabelInput">등급</label>
-              <input
-                class="input"
-                id="prizeLabelInput"
-                type="text"
-                placeholder="예: A상"
-              />
-            </div>
+            <div class="admin-row">
+              <div class="field grow">
+                <label for="prizeTierSelect">등급</label>
+                <select class="input" id="prizeTierSelect">
+                  <option value="A상">A상</option>
+                  <option value="B상">B상</option>
+                  <option value="C상">C상</option>
+                  <option value="D상">D상</option>
+                  <option value="E상">E상</option>
+                </select>
+              </div>
 
-            <div class="field">
-              <label for="prizeStockInput">수량</label>
-              <input
-                class="input"
-                id="prizeStockInput"
-                type="number"
-                min="1"
-                step="1"
-                value="1"
-              />
+              <div class="field small">
+                <label for="prizeStockInput">수량</label>
+                <input
+                  class="input"
+                  id="prizeStockInput"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="1"
+                />
+              </div>
             </div>
 
             <div class="field">
@@ -242,7 +244,7 @@
               />
             </div>
 
-            <div class="field buttons">
+            <div class="field buttons full">
               <button class="btn ok" id="btnAddPrize" type="button">상품 추가</button>
             </div>
           </div>
@@ -259,17 +261,7 @@
                 class="input"
                 id="lastOneNameInput"
                 type="text"
-                placeholder="예: 스피리테일 토가"
-              />
-            </div>
-
-            <div class="field">
-              <label for="lastOneLabelInput">표시 라벨</label>
-              <input
-                class="input"
-                id="lastOneLabelInput"
-                type="text"
-                placeholder="예: LAST ONE"
+                placeholder="예: 피규어"
               />
             </div>
 
@@ -293,11 +285,11 @@
               />
             </div>
 
-            <div class="field buttons">
+            <div class="field buttons full">
               <button class="btn ok" id="btnApplyLastOne" type="button">라스트원 적용</button>
             </div>
 
-            <div class="field buttons">
+            <div class="field buttons full">
               <button class="btn danger" id="btnClearLastOne" type="button">라스트원 삭제</button>
             </div>
           </div>
@@ -309,7 +301,7 @@
 
           <div class="admin-col">
             <div class="field">
-              <label for="kujiTitleInput">쿠지명</label>
+              <label for="kujiTitleInput">쿠지판 이름</label>
               <input
                 class="input"
                 id="kujiTitleInput"
@@ -318,7 +310,7 @@
               />
             </div>
 
-            <div class="field buttons">
+            <div class="field buttons full">
               <button class="btn ok" id="btnApplyTitle" type="button">적용</button>
             </div>
 
@@ -334,7 +326,7 @@
               />
             </div>
 
-            <div class="field buttons">
+            <div class="field buttons full">
               <button class="btn ok" id="btnApplyTickets" type="button">적용</button>
             </div>
           </div>
@@ -344,6 +336,54 @@
         <div class="admin-section">
           <div class="admin-section-title">현재 상품 목록</div>
           <div class="admin-prize-manage-list" id="adminPrizeList"></div>
+        </div>
+
+        <!-- 쿠지판 변경 -->
+        <div class="admin-section">
+          <div class="admin-section-title">쿠지판 변경</div>
+
+          <div class="admin-col">
+            <div class="field">
+              <label for="boardSelect">쿠지판 선택</label>
+              <select class="input" id="boardSelect"></select>
+            </div>
+
+            <div class="field">
+              <label for="newBoardNameInput">새 쿠지판 이름</label>
+              <input
+                class="input"
+                id="newBoardNameInput"
+                type="text"
+                placeholder="예: 귀멸 쿠지"
+              />
+            </div>
+
+            <div class="field">
+              <label for="boardBgInput">배경 이미지</label>
+              <input
+                class="input"
+                id="boardBgInput"
+                type="file"
+                accept="image/*"
+              />
+            </div>
+
+            <div class="field">
+              <label for="boardPaperInput">뽑기 종이 이미지</label>
+              <input
+                class="input"
+                id="boardPaperInput"
+                type="file"
+                accept="image/*"
+              />
+            </div>
+
+            <div class="admin-action-grid board-action-grid">
+              <button class="btn ok" id="btnCreateBoard" type="button">새 쿠지판 생성</button>
+              <button class="btn primary" id="btnApplyBoard" type="button">선택 쿠지판 적용</button>
+              <button class="btn danger" id="btnDeleteBoard" type="button">쿠지판 삭제</button>
+            </div>
+          </div>
         </div>
 
         <!-- 관리 버튼 -->
@@ -361,9 +401,7 @@
       </div>
     </aside>
 
-    <!-- 빵빠레 -->
     <audio id="fanfare" src="./assets/fanfare.mp3" preload="auto"></audio>
-
   </div>
 
   <!-- Draw Modal -->
@@ -379,6 +417,8 @@
       </div>
 
       <div class="modal-body">
+        <div class="modal-number" id="modalResultNumber">0</div>
+
         <div class="modal-media">
           <img id="modalResultImg" alt="결과 이미지" />
         </div>
