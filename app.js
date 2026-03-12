@@ -29,16 +29,15 @@
     };
   }
 
-function createDefaultSettings() {
-  return {
-    totalTickets: CONFIG.defaultTotalTickets,
-    kujiTitle: "오지상 쿠지",
-    lastOnePrize: null,
-    priceText: "14,000원",
-    accountText: "기업은행 153-084786-01019 양*준",
-    lastSavedAt: null,
-  };
-}
+  function createDefaultSettings() {
+    return {
+      totalTickets: CONFIG.defaultTotalTickets,
+      kujiTitle: "오지상 쿠지",
+      lastOnePrize: null,
+      priceText: "14,000원",
+      accountText: "기업은행 153-084786-01019 양*준",
+    };
+  }
 
   function createBoardMeta(name = "기본 쿠지판") {
     return {
@@ -66,35 +65,30 @@ function createDefaultSettings() {
     };
   }
 
-function createInitialBoards() {
-  const base = createDefaultBoard("기본 쿠지판");
-  const mha = createDefaultBoard("나히아 쿠지판");
-  const kimetsu = createDefaultBoard("귀멸 쿠지판");
-  const onepiece = createDefaultBoard("원피스 쿠지판");
-  const aot = createDefaultBoard("진격 쿠지판");
+  function createInitialBoards() {
+    const base = createDefaultBoard("기본 쿠지판");
+    const mha = createDefaultBoard("나히아 쿠지판");
+    const kimetsu = createDefaultBoard("귀멸 쿠지판");
+    const onepiece = createDefaultBoard("원피스 쿠지판");
+    const aot = createDefaultBoard("진격 쿠지판");
 
-  // 기본 쿠지판
-  base.meta.bgImage = "./assets/bg.png";
-  base.meta.paperImage = "./assets/paper.png";
+    base.meta.bgImage = "./assets/bg.png";
+    base.meta.paperImage = "./assets/paper.png";
 
-  // 나히아 쿠지판
-  mha.meta.bgImage = "./assets/bg_mha.png";
-  mha.meta.paperImage = "./assets/paper_mha.png";
+    mha.meta.bgImage = "./assets/bg_mha.png";
+    mha.meta.paperImage = "./assets/paper_mha.png";
 
-  // 귀멸 쿠지판
-  kimetsu.meta.bgImage = "./assets/bg_kimetsu.png";
-  kimetsu.meta.paperImage = "./assets/paper_kimetsu.png";
+    kimetsu.meta.bgImage = "./assets/bg_kimetsu.png";
+    kimetsu.meta.paperImage = "./assets/paper_kimetsu.png";
 
-  // 원피스 쿠지판
-  onepiece.meta.bgImage = "./assets/bg_onepiece.png";
-  onepiece.meta.paperImage = "./assets/paper_onepiece.png";
+    onepiece.meta.bgImage = "./assets/bg_onepiece.png";
+    onepiece.meta.paperImage = "./assets/paper_onepiece.png";
 
-  // 진격 쿠지판
-  aot.meta.bgImage = "./assets/bg_aot.png";
-  aot.meta.paperImage = "./assets/paper_aot.png";
+    aot.meta.bgImage = "./assets/bg_aot.png";
+    aot.meta.paperImage = "./assets/paper_aot.png";
 
-  return [base, mha, kimetsu, onepiece, aot];
-}
+    return [base, mha, kimetsu, onepiece, aot];
+  }
 
   const store = {
     currentBoardId: null,
@@ -113,9 +107,6 @@ function createInitialBoards() {
     ticketResults: {},
   };
 
-  // =========================
-  // Elements
-  // =========================
   const appRoot = $("#appRoot");
   const board = $("#board");
 
@@ -195,22 +186,29 @@ function createInitialBoards() {
   const modalResultNumber = $("#modalResultNumber");
   const modalResultImg = $("#modalResultImg");
   const modalPaper = $("#modalPaper");
-  const modalPaperImg = $("#modalPaperImg");
   const modalReveal = $("#modalReveal");
   const modalRevealBig = $("#modalRevealBig");
   const modalRevealSmall = $("#modalRevealSmall");
   const modalLoading = $("#modalLoading");
   const modalConfetti = $("#modalConfetti");
 
-  if (modalResultImg) {
-    modalResultImg.onerror = () => {
-      modalResultImg.src = CONFIG.defaultEmptyResultImage;
-    };
-  }
+  const peelSound = $("#peelSound");
+  const lastOneSound = $("#lastOneSound");
 
-  // =========================
-  // Utils
-  // =========================
+const modalStagePeel = $("#modalStagePeel");
+const modalStageResult = $("#modalStageResult");
+
+  const modalPaperImg = $("#modalPaperImg");
+const modalResultPanel = $("#modalResultPanel");
+
+  if (modalResultImg) {
+  modalResultImg.onerror = () => {
+    modalResultImg.onerror = null;
+    modalResultImg.src = "";
+    modalResultImg.classList.add("is-hidden");
+  };
+}
+
   function sleep(ms) {
     return new Promise((res) => setTimeout(res, ms));
   }
@@ -332,25 +330,21 @@ function createInitialBoards() {
   }
 
   function saveStore() {
-  const current = getCurrentBoard();
-  if (current) {
-    state.settings.lastSavedAt = new Date().toISOString();
-    current.state = exportState();
+    const current = getCurrentBoard();
+    if (current) {
+      current.state = exportState();
+    }
+    localStorage.setItem(CONFIG.MASTER_KEY, JSON.stringify(store));
   }
-
-  localStorage.setItem(CONFIG.MASTER_KEY, JSON.stringify(store));
-}
 
   function loadStore() {
     const raw = localStorage.getItem(CONFIG.MASTER_KEY);
 
     if (!raw) {
       const initialBoards = createInitialBoards();
-
       initialBoards.forEach((boardObj) => {
         store.boards[boardObj.meta.id] = boardObj;
       });
-
       store.currentBoardId = initialBoards[0].meta.id;
       importState(initialBoards[0].state);
       saveStore();
@@ -365,11 +359,9 @@ function createInitialBoards() {
       const current = getCurrentBoard();
       if (!current) {
         const initialBoards = createInitialBoards();
-
         initialBoards.forEach((boardObj) => {
           store.boards[boardObj.meta.id] = boardObj;
         });
-
         store.currentBoardId = initialBoards[0].meta.id;
         importState(initialBoards[0].state);
       } else {
@@ -377,12 +369,10 @@ function createInitialBoards() {
       }
     } catch {
       const initialBoards = createInitialBoards();
-
       store.boards = {};
       initialBoards.forEach((boardObj) => {
         store.boards[boardObj.meta.id] = boardObj;
       });
-
       store.currentBoardId = initialBoards[0].meta.id;
       importState(initialBoards[0].state);
       saveStore();
@@ -401,7 +391,6 @@ function createInitialBoards() {
     if (!current) return;
 
     document.body.style.backgroundImage = `url("${current.meta.bgImage || CONFIG.defaultBgImage}")`;
-    if (modalPaperImg) modalPaperImg.src = current.meta.paperImage || CONFIG.defaultCoverPaperImage;
     if (boardLogo) boardLogo.src = CONFIG.defaultBoardLogo;
     if (topLogo) topLogo.src = CONFIG.defaultTopLogo;
   }
@@ -458,19 +447,6 @@ function createInitialBoards() {
     return state.prizes.find((p) => p.id === "OJI") || createDefaultOjiPrize();
   }
 
-  function pruneToTotal(total) {
-    const nextUsed = {};
-    for (const k of Object.keys(state.used)) {
-      const num = Number(k);
-      if (Number.isFinite(num) && num >= 1 && num <= total) {
-        nextUsed[String(num)] = true;
-      }
-    }
-    state.used = nextUsed;
-    state.selectedNumbers = state.selectedNumbers.filter((n) => n >= 1 && n <= total && !state.used[String(n)]);
-    state.logs = state.logs.filter((l) => l.ticketNumber >= 1 && l.ticketNumber <= total);
-  }
-
   function setMode(mode) {
     state.mode = mode;
     document.body.setAttribute("data-mode", mode);
@@ -486,9 +462,6 @@ function createInitialBoards() {
     saveStore();
   }
 
-  // =========================
-  // Mode events
-  // =========================
   btnToggleMode?.addEventListener("click", () => {
     setMode(state.mode === "broadcast" ? "admin" : "broadcast");
   });
@@ -501,9 +474,6 @@ function createInitialBoards() {
     }
   });
 
-  // =========================
-  // Admin buttons
-  // =========================
   btnSave?.addEventListener("click", () => {
     saveStore();
     alert("저장되었습니다.");
@@ -668,9 +638,6 @@ function createInitialBoards() {
     saveStore();
   });
 
-  // =========================
-  // Board switching
-  // =========================
   btnCreateBoard?.addEventListener("click", async () => {
     const name = (newBoardNameInput?.value || "").trim();
     if (!name) {
@@ -759,9 +726,6 @@ function createInitialBoards() {
     saveStore();
   });
 
-  // =========================
-  // Queue
-  // =========================
   btnAddQueue?.addEventListener("click", addQueue);
   queueInput?.addEventListener("keydown", (e) => {
     if (e.key === "Enter") addQueue();
@@ -823,9 +787,6 @@ function createInitialBoards() {
     });
   }
 
-  // =========================
-  // Selection / control
-  // =========================
   btnRandomPick?.addEventListener("click", randomSelectCards);
   btnResetSelection?.addEventListener("click", () => {
     state.selectedNumbers = [];
@@ -839,7 +800,7 @@ function createInitialBoards() {
 
   function renderControlState() {
     if (btnOpenSelected) {
-      btnOpenSelected.textContent = `오픈 (${state.selectedNumbers.length})`;
+      btnOpenSelected.textContent = `▶ OPEN! (${state.selectedNumbers.length})`;
     }
   }
 
@@ -890,9 +851,6 @@ function createInitialBoards() {
     saveStore();
   }
 
-  // =========================
-  // Board
-  // =========================
   function buildBoard(total) {
     if (!board) return;
     board.innerHTML = "";
@@ -949,9 +907,6 @@ function createInitialBoards() {
     });
   }
 
-  // =========================
-  // Prize list / admin list
-  // =========================
   function formatNumberBadgeText(numbers) {
     if (!numbers || !numbers.length) return "번호 없음";
     const sorted = [...numbers].sort((a, b) => a - b);
@@ -1273,25 +1228,82 @@ function createInitialBoards() {
     if (lastOneDescInput) lastOneDescInput.value = state.settings.lastOnePrize?.desc || "";
   }
 
-  // =========================
-  // Modal
-  // =========================
-  function openModal() {
-    if (!drawModal) return;
-    drawModal.classList.add("show");
-    drawModal.style.display = "block";
-    drawModal.setAttribute("aria-hidden", "false");
-  }
+  let peelDragging = false;
+let peelStartX = 0;
+let peelCurrentX = 0;
+let peelDone = false;
+let pendingRevealData = null;
 
-  function closeModal() {
-    if (!drawModal) return;
 
-    drawModal.classList.remove("show");
-    drawModal.style.display = "none";
-    drawModal.setAttribute("aria-hidden", "true");
+ function bindPeelEvents() {
+  if (!modalPaper) return;
 
-    const card = drawModal.querySelector(".modal-card");
-    card?.classList.remove(
+  const startDrag = (clientX) => {
+    if (peelDone) return;
+
+    peelDragging = true;
+    peelStartX = clientX - peelCurrentX;
+    modalPaper.classList.add("dragging");
+  };
+
+  const moveDrag = (clientX) => {
+    if (!peelDragging || peelDone) return;
+
+    const maxX = modalPaper.offsetWidth;
+    const dx = Math.max(0, Math.min(clientX - peelStartX, maxX));
+    peelCurrentX = dx;
+
+    modalPaper.style.transform = `translateX(${dx}px)`;
+
+    const threshold = modalPaper.offsetWidth * 0.92;
+    if (dx >= threshold) {
+      peelDragging = false;
+      modalPaper.classList.remove("dragging");
+      finishPeelReveal();
+    }
+  };
+
+  const endDrag = () => {
+    if (!peelDragging || peelDone) return;
+
+    peelDragging = false;
+    modalPaper.classList.remove("dragging");
+
+    /* 자동 완료/자동 복귀 없음 */
+  };
+
+  modalPaper.addEventListener("mousedown", (e) => {
+    e.preventDefault();
+    startDrag(e.clientX);
+  });
+
+  document.addEventListener("mousemove", (e) => {
+    moveDrag(e.clientX);
+  });
+
+  document.addEventListener("mouseup", () => {
+    endDrag();
+  });
+
+  modalPaper.addEventListener("touchstart", (e) => {
+    if (!e.touches.length) return;
+    startDrag(e.touches[0].clientX);
+  }, { passive: true });
+
+  document.addEventListener("touchmove", (e) => {
+    if (!e.touches.length) return;
+    moveDrag(e.touches[0].clientX);
+  }, { passive: true });
+
+  document.addEventListener("touchend", () => {
+    endDrag();
+  });
+}
+
+  function resetDrawModalState() {
+  const card = drawModal?.querySelector(".modal-card");
+  if (card) {
+    card.classList.remove(
       "peel",
       "reveal-text-on",
       "fx-gold",
@@ -1302,11 +1314,162 @@ function createInitialBoards() {
       "fx-shake",
       "fx-ripple"
     );
+  }
 
-    modalLoading?.classList.remove("active");
-    modalReveal?.classList.remove("active");
-    modalPaper?.classList.remove("active");
-    if (modalConfetti) modalConfetti.innerHTML = "";
+  if (modalStagePeel) modalStagePeel.style.display = "block";
+  if (modalStageResult) modalStageResult.style.display = "none";
+
+  if (modalResultPanel) modalResultPanel.classList.remove("show");
+
+  modalResultPanel?.classList.remove("tier-a", "tier-b", "tier-c", "tier-d", "tier-e");
+
+  if (modalPaper) {
+    modalPaper.style.transform = "translateX(0px)";
+    modalPaper.classList.remove("dragging");
+    modalPaper.style.display = "block";
+  }
+
+  if (modalConfetti) modalConfetti.innerHTML = "";
+  if (modalResultNumber) modalResultNumber.textContent = "";
+  if (modalRevealBig) modalRevealBig.textContent = "";
+  if (modalRevealSmall) modalRevealSmall.innerHTML = "";
+
+  if (modalResultImg) {
+    modalResultImg.src = "";
+    modalResultImg.classList.add("is-hidden");
+  }
+
+  peelDragging = false;
+  peelStartX = 0;
+  peelCurrentX = 0;
+  peelDone = false;
+  pendingRevealData = null;
+}
+
+function showResultPanel() {
+  if (!pendingRevealData) return;
+
+  const { prizeName, prizeLabel, ticketNumber, who, prizeImg, tier, hasLastOne } = pendingRevealData;
+
+  if (modalTitle) modalTitle.textContent = "결과 공개";
+  if (modalSub) modalSub.textContent = "";
+
+  const resultTitle = prizeLabel ? `${prizeLabel} ${prizeName}` : prizeName;
+
+  if (modalRevealBig) {
+    modalRevealBig.textContent = resultTitle;
+  }
+
+  if (modalRevealSmall) {
+    modalRevealSmall.innerHTML = `
+      <div class="result-meta-line">종이 ${ticketNumber}</div>
+      <div class="result-meta-line result-who">${who || "참여자"}</div>
+    `;
+  }
+
+  if (modalResultImg) {
+    if (prizeImg) {
+      modalResultImg.src = prizeImg;
+      modalResultImg.classList.remove("is-hidden");
+    } else {
+      modalResultImg.src = "";
+      modalResultImg.classList.add("is-hidden");
+    }
+  }
+
+  if (modalStagePeel) modalStagePeel.style.display = "none";
+  if (modalStageResult) modalStageResult.style.display = "block";
+
+  modalResultPanel?.classList.remove(
+    "tier-a",
+    "tier-b",
+    "tier-c",
+    "tier-d",
+    "tier-e",
+    "lastone-result",
+    "show-congrats"
+  );
+
+  if (hasLastOne) {
+    modalResultPanel?.classList.add("lastone-result");
+    modalResultPanel?.classList.add("show-congrats");
+  } else if (tier === 1) {
+    modalResultPanel?.classList.add("tier-a");
+    modalResultPanel?.classList.add("show-congrats");
+  } else if (tier === 2) {
+    modalResultPanel?.classList.add("tier-b");
+    modalResultPanel?.classList.add("show-congrats");
+  } else if (tier === 3) {
+    modalResultPanel?.classList.add("tier-c");
+    modalResultPanel?.classList.add("show-congrats");
+  } else if (tier === 4) {
+    modalResultPanel?.classList.add("tier-d");
+    modalResultPanel?.classList.add("show-congrats");
+  } else {
+    modalResultPanel?.classList.add("tier-e");
+    /* 오지상/기본상은 축하문구 없음 */
+  }
+
+  modalResultPanel?.classList.add("show");
+
+  const card = drawModal?.querySelector(".modal-card");
+  card?.classList.remove("fx-lastone-boom");
+
+  if (hasLastOne) {
+    applyTierNeon(1);
+    applyTierSpecialFx(1);
+    card?.classList.add("fx-lastone-boom");
+    burstConfetti(180);
+    playLastOneSound();
+
+    setTimeout(() => {
+      card?.classList.remove("fx-lastone-boom");
+    }, 1200);
+
+    return;
+  }
+
+  applyTierNeon(tier);
+
+  if (tier === 1) {
+    applyTierSpecialFx(1);
+    burstConfetti(120);
+    playFanfare();
+  } else if (tier === 2) {
+    applyTierSpecialFx(2);
+    burstConfetti(70);
+    playFanfare();
+  }
+}
+
+  function openModal() {
+    if (!drawModal) return;
+    resetDrawModalState();
+    drawModal.classList.add("show");
+    drawModal.style.display = "block";
+    drawModal.setAttribute("aria-hidden", "false");
+  }
+
+function finishPeelReveal() {
+  if (peelDone) return;
+  peelDone = true;
+
+  if (modalPaper) {
+    modalPaper.style.transform = "translateX(110%)";
+    modalPaper.classList.remove("dragging");
+  }
+
+  setTimeout(() => {
+    if (modalPaper) modalPaper.style.display = "none";
+    showResultPanel();
+  }, 180);
+}
+  function closeModal() {
+    if (!drawModal) return;
+    resetDrawModalState();
+    drawModal.classList.remove("show");
+    drawModal.style.display = "none";
+    drawModal.setAttribute("aria-hidden", "true");
   }
 
   modalBackdrop?.addEventListener("click", closeModal);
@@ -1338,33 +1501,61 @@ function createInitialBoards() {
     }, 900);
   }
 
-  function runModalPeelReveal({ resultNumber, prizeName, ticketNumber, who, prizeImg }) {
-    const card = drawModal?.querySelector(".modal-card");
-    if (!card) return;
+  function runModalPeelReveal({
+  resultNumber,
+  prizeName,
+  prizeLabel,
+  ticketNumber,
+  who,
+  prizeImg,
+  tier,
+  hasLastOne
+}) {
+  if (modalStagePeel) modalStagePeel.style.display = "block";
+  if (modalStageResult) modalStageResult.style.display = "none";
 
-    modalPaper?.classList.remove("active");
-    modalReveal?.classList.remove("active");
-    card.classList.remove("peel", "reveal-text-on");
+  if (modalTitle) modalTitle.textContent = "번호 공개";
+  if (modalSub) modalSub.textContent = "";
 
-    if (modalResultNumber) modalResultNumber.textContent = `No. ${resultNumber}`;
-    if (modalRevealBig) modalRevealBig.textContent = prizeName;
-    if (modalRevealSmall) modalRevealSmall.textContent = `종이 ${ticketNumber} · 닉네임: ${who}`;
-
-    if (modalResultImg) modalResultImg.src = prizeImg || CONFIG.defaultEmptyResultImage;
-    if (modalPaperImg) modalPaperImg.src = getCurrentBoard()?.meta?.paperImage || CONFIG.defaultCoverPaperImage;
-
-    void card.offsetWidth;
-
-    modalPaper?.classList.add("active");
-    modalReveal?.classList.add("active");
-    card.classList.add("reveal-text-on");
-    card.classList.add("peel");
-
-    setTimeout(() => {
-      modalPaper?.classList.remove("active");
-      card.classList.remove("peel");
-    }, 950);
+  if (modalResultNumber) {
+    modalResultNumber.textContent = `${resultNumber}`;
   }
+
+  if (modalRevealBig) modalRevealBig.textContent = "";
+  if (modalRevealSmall) modalRevealSmall.innerHTML = "";
+
+  if (modalResultImg) {
+    modalResultImg.src = "";
+    modalResultImg.classList.add("is-hidden");
+  }
+
+  if (modalPaperImg) {
+    modalPaperImg.src = getCurrentBoard()?.meta?.paperImage || CONFIG.defaultCoverPaperImage;
+  }
+
+  if (modalPaper) {
+    modalPaper.style.display = "block";
+    modalPaper.style.transform = "translateX(0px)";
+    modalPaper.classList.remove("dragging");
+  }
+
+  modalResultPanel?.classList.remove("show");
+
+  peelDragging = false;
+  peelStartX = 0;
+  peelCurrentX = 0;
+  peelDone = false;
+
+  pendingRevealData = {
+    prizeName,
+    prizeLabel,
+    ticketNumber,
+    who,
+    prizeImg,
+    tier,
+    hasLastOne,
+  };
+}
 
   function playFanfare() {
     if (!CONFIG.useFanfare || !fanfare) return;
@@ -1373,6 +1564,22 @@ function createInitialBoards() {
       fanfare.play().catch(() => {});
     } catch {}
   }
+
+  function playLastOneSound() {
+  if (!lastOneSound) return;
+  try {
+    lastOneSound.currentTime = 0;
+    lastOneSound.play().catch(() => {});
+  } catch {}
+}
+
+  function playPeelSound() {
+  if (!peelSound) return;
+  try {
+    peelSound.currentTime = 0;
+    peelSound.play().catch(() => {});
+  } catch {}
+}
 
   function burstConfetti(count = 44) {
     if (!modalConfetti) return;
@@ -1417,19 +1624,20 @@ function createInitialBoards() {
 
       openModal();
 
-      if (modalTitle) {
-        modalTitle.textContent = options.isBatch
-          ? `추첨 중 (${options.index + 1}/${options.total})`
-          : "추첨 중";
-      }
-      if (modalSub) modalSub.textContent = "잠시만 기다려 주세요.";
-      modalLoading?.classList.add("active");
+      if (modalTitle) modalTitle.textContent = "번호 공개";
+if (modalSub) modalSub.textContent = "종이를 끝까지 밀어서 숫자를 확인하세요.";
+      
+      if (modalResultNumber) modalResultNumber.textContent = "";
+      if (modalRevealBig) modalRevealBig.textContent = "";
+      if (modalRevealSmall) modalRevealSmall.innerHTML = "";
 
-      await sleep(CONFIG.drawDelayMs);
+      if (modalResultImg) {
+  modalResultImg.src = "";
+  modalResultImg.classList.add("is-hidden");
+}
 
       const resultNumber = Number(state.ticketResults[nKey]);
       if (!Number.isFinite(resultNumber)) {
-        modalLoading?.classList.remove("active");
         if (modalTitle) modalTitle.textContent = "오류";
         if (modalSub) modalSub.textContent = "결과 번호가 없습니다.";
         return;
@@ -1487,21 +1695,18 @@ function createInitialBoards() {
       if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
       if (modalSub) modalSub.textContent = `결과 번호 ${resultNumber}`;
 
-      applyTierNeon(prize.tier);
       runModalPeelReveal({
-        resultNumber,
-        prizeName: rewardText,
-        ticketNumber,
-        who,
-        prizeImg: prize.img || CONFIG.defaultEmptyResultImage,
-      });
-
-      const isFlashy = prize.id !== "OJI" && prize.tier <= CONFIG.flashyTierMax;
-      if (isFlashy || lastOnePrize) {
-        applyTierSpecialFx(prize.tier);
-        burstConfetti(lastOnePrize ? 70 : 52);
-        playFanfare();
-      }
+  resultNumber,
+  prizeName: lastOnePrize
+    ? `${prize.name} + ${lastOnePrize.name}`
+    : prize.name,
+  prizeLabel: lastOnePrize ? `${prize.label} + LAST ONE` : prize.label,
+  ticketNumber,
+  who,
+  prizeImg: lastOnePrize ? (lastOnePrize.img || "") : (prize.img || ""),
+  tier: lastOnePrize ? 1 : prize.tier,
+  hasLastOne: !!lastOnePrize,
+});
 
       if (drawerInfo.fromQueue) {
         shiftQueue();
@@ -1515,25 +1720,20 @@ function createInitialBoards() {
     }
   }
 
-  const saveStatus = $("#saveStatus");
+  function rebuildAssignmentsIfNeeded() {
+    const total = state.settings.totalTickets;
+    const hasTicketMap = state.ticketResults && Object.keys(state.ticketResults).length === total;
 
-function updateSaveStatus() {
-  if (!saveStatus) return;
+    const prizeHasNumbers = state.prizes
+      .filter((p) => p.id !== "OJI")
+      .every((p) => Array.isArray(p.numbers) && p.numbers.length === p.total);
 
-  const savedAt = state.settings.lastSavedAt;
-  if (!savedAt) {
-    saveStatus.textContent = "저장 기록 없음";
-    return;
+    if (!hasTicketMap || !prizeHasNumbers) {
+      rebuildAssignments();
+      saveStore();
+    }
   }
 
-  const d = new Date(savedAt);
-  saveStatus.textContent =
-    `자동 저장됨 · ${d.toLocaleString("ko-KR")}`;
-}
-
-  // =========================
-  // Init
-  // =========================
   loadStore();
   rebuildAssignmentsIfNeeded();
   rebuildBoardSelect();
@@ -1541,29 +1741,7 @@ function updateSaveStatus() {
   setMode(state.mode || "broadcast");
   buildBoard(state.settings.totalTickets);
   renderAll();
-  updateSaveStatus();
-
-  window.addEventListener("beforeunload", () => {
-  saveStore();
-});
+  bindPeelEvents();
 
   window.__KUJI__ = { state, store, rebuildAssignments, startDraw };
-
-  function rebuildAssignmentsIfNeeded() {
-  const total = state.settings.totalTickets;
-
-  const hasTicketMap =
-    state.ticketResults &&
-    Object.keys(state.ticketResults).length === total;
-
-  const prizeHasNumbers = state.prizes
-    .filter((p) => p.id !== "OJI")
-    .every((p) => Array.isArray(p.numbers) && p.numbers.length === p.total);
-
-  if (!hasTicketMap || !prizeHasNumbers) {
-    console.warn("[KUJI] 저장 데이터가 불완전해서 번호를 새로 배정합니다.");
-    rebuildAssignments();
-    saveStore();
-  }
-}
 })();
