@@ -29,15 +29,16 @@
     };
   }
 
-  function createDefaultSettings() {
-    return {
-      totalTickets: CONFIG.defaultTotalTickets,
-      kujiTitle: "오지상 쿠지",
-      lastOnePrize: null,
-      priceText: "14,000원",
-      accountText: "기업은행 153-084786-01019 양*준",
-    };
-  }
+function createDefaultSettings() {
+  return {
+    totalTickets: CONFIG.defaultTotalTickets,
+    kujiTitle: "오지상 쿠지",
+    lastOnePrize: null,
+    priceText: "14,000원",
+    accountText: "기업은행 153-084786-01019 양*준",
+    lastSavedAt: null,
+  };
+}
 
   function createBoardMeta(name = "기본 쿠지판") {
     return {
@@ -331,12 +332,14 @@ function createInitialBoards() {
   }
 
   function saveStore() {
-    const current = getCurrentBoard();
-    if (current) {
-      current.state = exportState();
-    }
-    localStorage.setItem(CONFIG.MASTER_KEY, JSON.stringify(store));
+  const current = getCurrentBoard();
+  if (current) {
+    state.settings.lastSavedAt = new Date().toISOString();
+    current.state = exportState();
   }
+
+  localStorage.setItem(CONFIG.MASTER_KEY, JSON.stringify(store));
+}
 
   function loadStore() {
     const raw = localStorage.getItem(CONFIG.MASTER_KEY);
@@ -1512,6 +1515,22 @@ function createInitialBoards() {
     }
   }
 
+  const saveStatus = $("#saveStatus");
+
+function updateSaveStatus() {
+  if (!saveStatus) return;
+
+  const savedAt = state.settings.lastSavedAt;
+  if (!savedAt) {
+    saveStatus.textContent = "저장 기록 없음";
+    return;
+  }
+
+  const d = new Date(savedAt);
+  saveStatus.textContent =
+    `자동 저장됨 · ${d.toLocaleString("ko-KR")}`;
+}
+
   // =========================
   // Init
   // =========================
@@ -1522,20 +1541,29 @@ function createInitialBoards() {
   setMode(state.mode || "broadcast");
   buildBoard(state.settings.totalTickets);
   renderAll();
+  updateSaveStatus();
+
+  window.addEventListener("beforeunload", () => {
+  saveStore();
+});
 
   window.__KUJI__ = { state, store, rebuildAssignments, startDraw };
 
   function rebuildAssignmentsIfNeeded() {
-    const total = state.settings.totalTickets;
-    const hasTicketMap = state.ticketResults && Object.keys(state.ticketResults).length === total;
+  const total = state.settings.totalTickets;
 
-    const prizeHasNumbers = state.prizes
-      .filter((p) => p.id !== "OJI")
-      .every((p) => Array.isArray(p.numbers) && p.numbers.length === p.total);
+  const hasTicketMap =
+    state.ticketResults &&
+    Object.keys(state.ticketResults).length === total;
 
-    if (!hasTicketMap || !prizeHasNumbers) {
-      rebuildAssignments();
-      saveStore();
-    }
+  const prizeHasNumbers = state.prizes
+    .filter((p) => p.id !== "OJI")
+    .every((p) => Array.isArray(p.numbers) && p.numbers.length === p.total);
+
+  if (!hasTicketMap || !prizeHasNumbers) {
+    console.warn("[KUJI] 저장 데이터가 불완전해서 번호를 새로 배정합니다.");
+    rebuildAssignments();
+    saveStore();
   }
+}
 })();
