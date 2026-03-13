@@ -3050,3 +3050,32 @@ label{
       inset 0 0 14px rgba(255,255,255,.18);
   }
 }
+
+.modal-header{
+  position: relative;
+}
+
+.modal-edit-top-btn{
+  position: absolute;
+  left: 14px;
+  top: 50%;
+  transform: translateY(-50%);
+  border: 1px solid rgba(122,112,255,.55);
+  background: rgba(122,112,255,.14);
+  color: #fff;
+  padding: 8px 12px;
+  border-radius: 12px;
+  cursor: pointer;
+  font-weight: 900;
+  font-size: 13px;
+  line-height: 1;
+  z-index: 3;
+}
+
+.modal-edit-top-btn:hover{
+  background: rgba(122,112,255,.22);
+}
+
+.modal-edit-top-btn.is-hidden{
+  display: none;
+}

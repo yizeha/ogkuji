@@ -216,6 +216,7 @@
   const modalStageResult = $("#modalStageResult");
   const modalPaperImg = $("#modalPaperImg");
   const modalResultPanel = $("#modalResultPanel");
+  const modalHeader = drawModal?.querySelector(".modal-header");
   const btnAutoPeel = $("#btnAutoPeel");
 
   let peelDragging = false;
@@ -229,6 +230,8 @@
   let pendingDrawCommitted = false;
   let currentDrawResolver = null;
   let extraUiInjected = false;
+  let currentViewingLogTs = null;
+let btnEditWinnerName = null;
 
   if (modalResultImg) {
     modalResultImg.onerror = () => {
@@ -502,6 +505,13 @@
     }
     return state.prizes.find((p) => p.id === "OJI") || createDefaultOjiPrize();
   }
+
+  function isOjiResultNumber(resultNumber) {
+  return !state.prizes.some((p) => {
+    if (p.id === "OJI") return false;
+    return Array.isArray(p.numbers) && p.numbers.includes(resultNumber);
+  });
+}
 
   function getOpenedCount() {
     return Object.keys(state.used).length;
@@ -1006,60 +1016,111 @@
   }
 
   function findManualTicketForPrize(prize) {
-    if (!prize || prize.id === "OJI") return null;
+  if (!prize) return null;
 
-    const remainPrizeNumbers = (prize.numbers || []).filter((num) => {
-      const usedTicket = Object.keys(state.used).find((ticketNo) => {
-        if (!state.used[ticketNo]) return false;
-        return Number(state.ticketResults[ticketNo]) === Number(num);
-      });
-      return !usedTicket;
+  if (prize.id === "OJI") {
+    const remainOjiTicket = Object.keys(state.ticketResults).find((ticketNo) => {
+      if (state.used[ticketNo]) return false;
+      const resultNumber = Number(state.ticketResults[ticketNo]);
+      return isOjiResultNumber(resultNumber);
     });
 
-    for (const resultNumber of remainPrizeNumbers) {
-      const ticketNumber = Object.keys(state.ticketResults).find((ticketNo) => {
-        return !state.used[ticketNo] && Number(state.ticketResults[ticketNo]) === Number(resultNumber);
-      });
-
-      if (ticketNumber) {
-        return {
-          ticketNumber: Number(ticketNumber),
-          resultNumber: Number(resultNumber),
-        };
-      }
+    if (remainOjiTicket) {
+      return {
+        ticketNumber: Number(remainOjiTicket),
+        resultNumber: Number(state.ticketResults[remainOjiTicket]),
+      };
     }
-
     return null;
   }
 
+  const remainPrizeNumbers = (prize.numbers || []).filter((num) => {
+    const usedTicket = Object.keys(state.used).find((ticketNo) => {
+      if (!state.used[ticketNo]) return false;
+      return Number(state.ticketResults[ticketNo]) === Number(num);
+    });
+    return !usedTicket;
+  });
+
+  for (const resultNumber of remainPrizeNumbers) {
+    const ticketNumber = Object.keys(state.ticketResults).find((ticketNo) => {
+      return !state.used[ticketNo] && Number(state.ticketResults[ticketNo]) === Number(resultNumber);
+    });
+
+    if (ticketNumber) {
+      return {
+        ticketNumber: Number(ticketNumber),
+        resultNumber: Number(resultNumber),
+      };
+    }
+  }
+
+  return null;
+}
+
   function manualAwardPrize(prizeId) {
-    const prize = state.prizes.find((p) => p.id === prizeId);
-    if (!prize || prize.id === "OJI") {
-      alert("수동당첨 대상 상품이 아닙니다.");
+  const prize = state.prizes.find((p) => p.id === prizeId);
+  if (!prize) {
+    alert("수동당첨 대상 상품이 아닙니다.");
+    return;
+  }
+
+  let manualCount = 1;
+
+  if (prize.id === "OJI") {
+    const remainOjiCount = Object.keys(state.ticketResults).filter((ticketNo) => {
+      if (state.used[ticketNo]) return false;
+      const resultNumber = Number(state.ticketResults[ticketNo]);
+      return isOjiResultNumber(resultNumber);
+    }).length;
+
+    if (remainOjiCount <= 0) {
+      alert("남아 있는 오지상 티켓이 없습니다.");
       return;
     }
 
+    const countInput = prompt(
+      `오지상 수동당첨을 몇 장 처리할까요?\n남은 가능 수량: ${remainOjiCount}장`,
+      "1"
+    );
+    if (countInput === null) return;
+
+    manualCount = Math.floor(Number(countInput));
+    if (!Number.isFinite(manualCount) || manualCount < 1) {
+      alert("수량은 1 이상 숫자로 입력해주이소.");
+      return;
+    }
+
+    if (manualCount > remainOjiCount) {
+      alert(`남은 오지상 가능 수량은 ${remainOjiCount}장입니더.`);
+      return;
+    }
+  } else {
     if (prize.stock <= 0) {
       alert("이 상품은 이미 수량이 없습니다.");
       return;
     }
+  }
 
-    const nickname = prompt(`${prize.label} ${prize.name}\n수동 당첨 닉네임을 입력해주이소.`, "");
-    if (nickname === null) return;
+  const nickname = prompt(
+    `${prize.label} ${prize.name}\n수동 당첨 닉네임을 입력해주이소.`,
+    ""
+  );
+  if (nickname === null) return;
 
-    const who = String(nickname || "").trim();
-    if (!who) {
-      alert("닉네임을 입력해야 합니더.");
-      return;
-    }
+  const who = String(nickname || "").trim();
+  if (!who) {
+    alert("닉네임을 입력해야 합니더.");
+    return;
+  }
 
+  pushHistory();
+
+  const createdLogs = [];
+
+  for (let i = 0; i < manualCount; i++) {
     const matched = findManualTicketForPrize(prize);
-    if (!matched) {
-      alert("해당 상품에 연결된 남은 티켓을 찾지 못했습니다.");
-      return;
-    }
-
-    pushHistory();
+    if (!matched) break;
 
     const openedBefore = Object.keys(state.used).length;
     const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
@@ -1071,15 +1132,28 @@
         ? state.settings.lastOnePrize
         : null;
 
-    prize.stock = Math.max(0, prize.stock - 1);
+    if (prize.id !== "OJI") {
+      prize.stock = Math.max(0, prize.stock - 1);
+    }
+
     state.used[String(matched.ticketNumber)] = true;
     state.selectedNumbers = state.selectedNumbers.filter((x) => x !== matched.ticketNumber);
 
-    if (lastOnePrize) lastOnePrize.claimed = true;
+    if (lastOnePrize) {
+      lastOnePrize.claimed = true;
+    }
 
-    const displayPrizeName = lastOnePrize ? `${prize.name} + ${lastOnePrize.name}` : prize.name;
-    const displayTierText = lastOnePrize ? `${prize.label} + LAST ONE` : prize.label;
-    const displayImg = lastOnePrize ? (lastOnePrize.img || prize.img || "") : (prize.img || "");
+    const displayPrizeName = lastOnePrize
+      ? `${prize.name} + ${lastOnePrize.name}`
+      : prize.name;
+
+    const displayTierText = lastOnePrize
+      ? `${prize.label} + LAST ONE`
+      : prize.label;
+
+    const displayImg = lastOnePrize
+      ? (lastOnePrize.img || prize.img || "")
+      : (prize.img || "");
 
     const log = {
       ticketNumber: matched.ticketNumber,
@@ -1097,37 +1171,53 @@
         minute: "2-digit",
         second: "2-digit",
       }),
-      ts: Date.now(),
+      ts: Date.now() + i,
       isManual: true,
     };
 
     state.logs.push(log);
-    if (state.logs.length > 100) state.logs = state.logs.slice(-100);
-
-    renderAll();
-    saveStore();
-
-    openModal();
-    fillResultPanel(
-      {
-        prizeName: displayPrizeName,
-        tierText: displayTierText,
-        ticketNumber: matched.ticketNumber,
-        who,
-        prizeImg: displayImg,
-        tier: lastOnePrize ? 1 : prize.tier,
-        hasLastOne: !!lastOnePrize,
-      },
-      { withEffects: true }
-    );
-
-    if (modalTitle) modalTitle.textContent = "수동 당첨 처리";
-    if (modalSub) {
-      modalSub.textContent = lastOnePrize
-        ? `관리자 수동 처리 · 결과 번호 ${matched.resultNumber} · LAST ONE 포함`
-        : `관리자 수동 처리 · 결과 번호 ${matched.resultNumber}`;
-    }
+    createdLogs.push(log);
   }
+
+  if (state.logs.length > 100) {
+    state.logs = state.logs.slice(-100);
+  }
+
+  renderAll();
+  saveStore();
+
+  if (!createdLogs.length) {
+    alert("처리할 수 있는 수동당첨 티켓을 찾지 못했습니다.");
+    return;
+  }
+
+  const lastLog = createdLogs[createdLogs.length - 1];
+
+  openModal();
+  fillResultPanel(
+    {
+      prizeName:
+        createdLogs.length > 1
+          ? `${lastLog.displayPrizeName} 외 ${createdLogs.length - 1}건`
+          : lastLog.displayPrizeName,
+      tierText: lastLog.displayTierText,
+      ticketNumber: lastLog.ticketNumber,
+      who,
+      prizeImg: lastLog.prizeImg,
+      tier: lastLog.tier,
+      hasLastOne: !!lastLog.hasLastOne,
+    },
+    { withEffects: true }
+  );
+
+  if (modalTitle) modalTitle.textContent = "수동 당첨 처리";
+  if (modalSub) {
+    modalSub.textContent =
+      createdLogs.length > 1
+        ? `관리자 수동 처리 · 총 ${createdLogs.length}건 처리 완료`
+        : `관리자 수동 처리 · 결과 번호 ${lastLog.resultNumber}`;
+  }
+}
 
   function renderAdminPrizeList() {
     if (!adminPrizeList) return;
@@ -1178,21 +1268,24 @@
       del.className = "admin-prize-delete";
 
       if (p.id === "OJI") {
-        edit.textContent = "기본";
-        edit.disabled = true;
-        edit.style.opacity = ".5";
-        edit.style.cursor = "default";
+  edit.textContent = "기본";
+  edit.disabled = true;
+  edit.style.opacity = ".5";
+  edit.style.cursor = "default";
 
-        manual.textContent = "기본";
-        manual.disabled = true;
-        manual.style.opacity = ".5";
-        manual.style.cursor = "default";
+  manual.textContent = "수동당첨";
+  manual.disabled = false;
+  manual.style.opacity = "1";
+  manual.style.cursor = "pointer";
+  manual.addEventListener("click", () => manualAwardPrize(p.id));
 
-        del.textContent = "기본";
-        del.disabled = true;
-        del.style.opacity = ".5";
-        del.style.cursor = "default";
-      } else {
+  del.textContent = "기본";
+  del.disabled = true;
+  del.style.opacity = ".5";
+  del.style.cursor = "default";
+}
+      
+      else {
         edit.textContent = "수정";
         edit.addEventListener("click", () => openPrizeEditSection(p.id));
 
@@ -1401,61 +1494,98 @@
   }
 
   function injectExtraUi() {
-    if (extraUiInjected) return;
-    extraUiInjected = true;
+  if (extraUiInjected) return;
+  extraUiInjected = true;
 
-    const style = document.createElement("style");
-    style.textContent = `
-      .result-tier-badge{
-        order: 0;
-        display: inline-flex;
-        align-items: center;
-        justify-content: center;
-        margin: 0 0 14px;
-        padding: 8px 16px;
-        border-radius: 999px;
-        font-size: 18px;
-        font-weight: 900;
-        color: #fff6cf;
-        background: rgba(255,255,255,.08);
-        border: 1px solid rgba(255,255,255,.18);
-        box-shadow: 0 6px 18px rgba(0,0,0,.18);
-        text-shadow: 0 2px 8px rgba(0,0,0,.45);
-      }
-      .winrow{
-        cursor: pointer;
-      }
-      .winrow:hover{
-        filter: brightness(1.05);
-      }
-      .admin-prize-manual{
-        border: 1px solid rgba(255,195,77,.55);
-        background: rgba(255,195,77,.12);
-        color: var(--text);
-        padding: 10px 12px;
-        border-radius: 12px;
-        cursor: pointer;
-        font-weight: 900;
-        font-size: 11px;
-        white-space: nowrap;
-      }
-      .admin-prize-manual:hover{
-        background: rgba(255,195,77,.22);
-      }
-    `;
-    document.head.appendChild(style);
-
-    if (drawModal && !drawModal.querySelector(".modal-flash")) {
-      const flash = document.createElement("div");
-      flash.className = "modal-flash";
-      const modalBody = drawModal.querySelector(".modal-body");
-      if (modalBody) modalBody.appendChild(flash);
+  const style = document.createElement("style");
+  style.textContent = `
+    .result-tier-badge{
+      order: 0;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      margin: 0 0 14px;
+      padding: 8px 16px;
+      border-radius: 999px;
+      font-size: 18px;
+      font-weight: 900;
+      color: #fff6cf;
+      background: rgba(255,255,255,.08);
+      border: 1px solid rgba(255,255,255,.18);
+      box-shadow: 0 6px 18px rgba(0,0,0,.18);
+      text-shadow: 0 2px 8px rgba(0,0,0,.45);
     }
+    .winrow{
+      cursor: pointer;
+    }
+    .winrow:hover{
+      filter: brightness(1.05);
+    }
+    .admin-prize-manual{
+      border: 1px solid rgba(255,195,77,.55);
+      background: rgba(255,195,77,.12);
+      color: var(--text);
+      padding: 10px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 11px;
+      white-space: nowrap;
+    }
+    .admin-prize-manual:hover{
+      background: rgba(255,195,77,.22);
+    }
+    .modal-header{
+      position: relative;
+    }
+    .modal-edit-top-btn{
+      position: absolute;
+      left: 14px;
+      top: 50%;
+      transform: translateY(-50%);
+      border: 1px solid rgba(122,112,255,.55);
+      background: rgba(122,112,255,.14);
+      color: #fff;
+      padding: 8px 12px;
+      border-radius: 12px;
+      cursor: pointer;
+      font-weight: 900;
+      font-size: 13px;
+      line-height: 1;
+      z-index: 3;
+    }
+    .modal-edit-top-btn:hover{
+      background: rgba(122,112,255,.22);
+    }
+    .modal-edit-top-btn.is-hidden{
+      display: none;
+    }
+  `;
+  document.head.appendChild(style);
+
+  if (drawModal && !drawModal.querySelector(".modal-flash")) {
+    const flash = document.createElement("div");
+    flash.className = "modal-flash";
+    const modalBody = drawModal.querySelector(".modal-body");
+    if (modalBody) modalBody.appendChild(flash);
   }
 
-  function showWinnerEditButton() {
-    /* footer 제거 버전이라 버튼 노출 안 씀 */
+  if (modalHeader && !$("#btnEditWinnerName", modalHeader)) {
+    btnEditWinnerName = document.createElement("button");
+    btnEditWinnerName.type = "button";
+    btnEditWinnerName.id = "btnEditWinnerName";
+    btnEditWinnerName.className = "modal-edit-top-btn is-hidden";
+    btnEditWinnerName.textContent = "닉네임 수정";
+
+    btnEditWinnerName.addEventListener("click", () => {
+      editCurrentViewingWinnerName();
+    });
+
+    modalHeader.appendChild(btnEditWinnerName);
+  } else {
+    btnEditWinnerName = $("#btnEditWinnerName", modalHeader);
   }
+}
 
   function ensureResultTierBadge() {
     if (!modalResultPanel) return null;
@@ -1686,32 +1816,82 @@
     }
   }
 
-  function editCurrentViewingWinnerName() {
-    /* footer 제거 버전이라 미사용 */
+ function findLogByTs(ts) {
+  return state.logs.find((log) => log.ts === ts) || null;
+}
+
+function editCurrentViewingWinnerName() {
+  if (!currentViewingLogTs) {
+    alert("수정할 당첨 기록이 없습니다.");
+    return;
   }
+
+  const targetLog = findLogByTs(currentViewingLogTs);
+  if (!targetLog) {
+    alert("기록을 찾지 못했습니다.");
+    return;
+  }
+
+  const nextName = prompt("새 닉네임을 입력해주이소.", targetLog.who || "");
+  if (nextName === null) return;
+
+  const trimmed = String(nextName || "").trim();
+  if (!trimmed) {
+    alert("닉네임은 비워둘 수 없습니다.");
+    return;
+  }
+
+  pushHistory();
+  targetLog.who = trimmed;
+
+  renderAll();
+  saveStore();
+
+  fillResultPanel(
+    {
+      prizeName: targetLog.displayPrizeName || targetLog.prizeName || "",
+      tierText: targetLog.displayTierText || targetLog.prizeId || "",
+      ticketNumber: targetLog.ticketNumber,
+      who: targetLog.who,
+      prizeImg: targetLog.prizeImg || "",
+      tier: targetLog.tier || 5,
+      hasLastOne: !!targetLog.hasLastOne,
+    },
+    { withEffects: false }
+  );
+
+  showWinnerEditButton(true);
+}
+
+  function showWinnerEditButton(show) {
+  if (!btnEditWinnerName) return;
+  btnEditWinnerName.classList.toggle("is-hidden", !show);
+}
 
   function openWinLogResult(log) {
-    if (!log) return;
+  if (!log) return;
 
-    openModal();
-    showWinnerEditButton(false);
+  openModal();
 
-    fillResultPanel(
-      {
-        prizeName: log.displayPrizeName || log.prizeName || "",
-        tierText: log.displayTierText || log.prizeId || "",
-        ticketNumber: log.ticketNumber,
-        who: log.who,
-        prizeImg: log.prizeImg || "",
-        tier: log.tier || 5,
-        hasLastOne: !!log.hasLastOne,
-      },
-      { withEffects: false }
-    );
+  currentViewingLogTs = log.ts;
+  showWinnerEditButton(true);
 
-    if (modalTitle) modalTitle.textContent = "당첨 결과 보기";
-    if (modalSub) modalSub.textContent = log.isManual ? "관리자 수동 처리 기록" : "";
-  }
+  fillResultPanel(
+    {
+      prizeName: log.displayPrizeName || log.prizeName || "",
+      tierText: log.displayTierText || log.prizeId || "",
+      ticketNumber: log.ticketNumber,
+      who: log.who,
+      prizeImg: log.prizeImg || "",
+      tier: log.tier || 5,
+      hasLastOne: !!log.hasLastOne,
+    },
+    { withEffects: false }
+  );
+
+  if (modalTitle) modalTitle.textContent = "당첨 결과 보기";
+  if (modalSub) modalSub.textContent = log.isManual ? "관리자 수동 처리 기록" : "";
+}
 
   function resetBoardOnly() {
     if (!confirm("현재 쿠지판의 뽑기 진행 상황만 초기화할까요?\n상품 목록은 유지됩니다.")) return;
@@ -1888,6 +2068,8 @@
     pendingRevealData = null;
     pendingDrawCommit = null;
     pendingDrawCommitted = false;
+    currentViewingLogTs = null;
+showWinnerEditButton(false);
 
     const flash = getModalFlashEl();
     if (flash) flash.classList.remove("on");
