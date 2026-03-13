@@ -49,21 +49,21 @@
       </div>
 
       <div class="topbar-right">
-  <div class="sound-control">
-    <button class="sound-btn" id="btnToggleSound" type="button">🔊 사운드</button>
-    <input
-      class="sound-range"
-      id="soundVolumeRange"
-      type="range"
-      min="0"
-      max="100"
-      step="1"
-      value="35"
-    />
-  </div>
+        <div class="sound-control">
+          <button class="sound-btn" id="btnToggleSound" type="button">🔊 사운드</button>
+          <input
+            class="sound-range"
+            id="soundVolumeRange"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="35"
+          />
+        </div>
 
-  <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
-</div>
+        <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
+      </div>
     </header>
 
     <section class="layout">
@@ -248,15 +248,15 @@
               </div>
             </div>
 
-<div class="field">
-  <label for="prizeImgUrlInput">이미지 URL (선택)</label>
-  <input
-    class="input"
-    id="prizeImgUrlInput"
-    type="text"
-    placeholder="https://pub-xxxxx.r2.dev/prizes/a1.png"
-  />
-</div>
+            <div class="field">
+              <label for="prizeImgUrlInput">이미지 URL (선택)</label>
+              <input
+                class="input"
+                id="prizeImgUrlInput"
+                type="text"
+                placeholder="https://pub-xxxxx.r2.dev/prizes/a1.png"
+              />
+            </div>
 
             <div class="field buttons full">
               <button class="btn ok" id="btnAddPrize" type="button">상품 추가</button>
@@ -290,14 +290,14 @@
             </div>
 
             <div class="field">
-  <label for="lastOneImgUrlInput">이미지 URL</label>
-  <input
-    class="input"
-    id="lastOneImgUrlInput"
-    type="text"
-    placeholder="https://pub-xxxxx.r2.dev/prizes/lastone.png"
-  />
-</div>
+              <label for="lastOneImgUrlInput">이미지 URL</label>
+              <input
+                class="input"
+                id="lastOneImgUrlInput"
+                type="text"
+                placeholder="https://pub-xxxxx.r2.dev/prizes/lastone.png"
+              />
+            </div>
 
             <div class="field buttons full">
               <button class="btn ok" id="btnApplyLastOne" type="button">라스트원 적용</button>
@@ -314,45 +314,43 @@
           <div class="admin-section-title">기본 설정</div>
 
           <div class="admin-col">
+            <div class="field">
+              <label for="kujiTitleInput">쿠지판 이름</label>
+              <input
+                class="input"
+                id="kujiTitleInput"
+                type="text"
+                placeholder="예: 오지상 쿠지"
+              />
+            </div>
 
-  <div class="field">
-    <label for="kujiTitleInput">쿠지판 이름</label>
-    <input
-      class="input"
-      id="kujiTitleInput"
-      type="text"
-      placeholder="예: 오지상 쿠지"
-    />
-  </div>
+            <div class="field">
+              <label for="priceInput">1회 가격</label>
+              <input
+                class="input"
+                id="priceInput"
+                type="text"
+                placeholder="예: 14,000원"
+              />
+            </div>
 
-  <div class="field">
-    <label for="priceInput">1회 가격</label>
-    <input
-      class="input"
-      id="priceInput"
-      type="text"
-      placeholder="예: 14,000원"
-    />
-  </div>
+            <div class="field">
+              <label for="totalTicketsInput">전체 뽑기 수</label>
+              <input
+                class="input"
+                id="totalTicketsInput"
+                type="number"
+                min="1"
+                step="1"
+              />
+            </div>
 
-  <div class="field">
-    <label for="totalTicketsInput">전체 뽑기 수</label>
-    <input
-      class="input"
-      id="totalTicketsInput"
-      type="number"
-      min="1"
-      step="1"
-    />
-  </div>
-
-  <div class="field buttons full">
-    <button class="btn ok" id="btnApplyBasicSettings" type="button">
-      설정 적용
-    </button>
-  </div>
-
-</div>
+            <div class="field buttons full">
+              <button class="btn ok" id="btnApplyBasicSettings" type="button">
+                설정 적용
+              </button>
+            </div>
+          </div>
         </div>
 
         <!-- 관리자 상품 목록 -->
@@ -360,6 +358,7 @@
           <div class="admin-section-title">현재 상품 목록</div>
           <div class="admin-prize-manage-list" id="adminPrizeList"></div>
         </div>
+
         <!-- 상품 수정 -->
         <div class="admin-section" id="editPrizeSection" style="display:none;">
           <div class="admin-section-title">상품 수정</div>
@@ -423,6 +422,7 @@
             </div>
           </div>
         </div>
+
         <!-- 쿠지판 변경 -->
         <div class="admin-section">
           <div class="admin-section-title">쿠지판 변경</div>
@@ -444,24 +444,24 @@
             </div>
 
             <div class="field">
-  <label for="boardBgUrlInput">배경 이미지 URL</label>
-  <input
-    class="input"
-    id="boardBgUrlInput"
-    type="text"
-    placeholder="https://pub-xxxxx.r2.dev/boards/bg.png"
-  />
-</div>
+              <label for="boardBgUrlInput">배경 이미지 URL</label>
+              <input
+                class="input"
+                id="boardBgUrlInput"
+                type="text"
+                placeholder="https://pub-xxxxx.r2.dev/boards/bg.png"
+              />
+            </div>
 
-<div class="field">
-  <label for="boardPaperUrlInput">뽑기 종이 이미지 URL</label>
-  <input
-    class="input"
-    id="boardPaperUrlInput"
-    type="text"
-    placeholder="https://pub-xxxxx.r2.dev/boards/paper.png"
-  />
-</div>
+            <div class="field">
+              <label for="boardPaperUrlInput">뽑기 종이 이미지 URL</label>
+              <input
+                class="input"
+                id="boardPaperUrlInput"
+                type="text"
+                placeholder="https://pub-xxxxx.r2.dev/boards/paper.png"
+              />
+            </div>
 
             <div class="admin-action-grid board-action-grid">
               <button class="btn ok" id="btnCreateBoard" type="button">새 쿠지판 생성</button>
@@ -497,7 +497,7 @@
     <div class="modal-backdrop" id="modalBackdrop"></div>
 
     <div class="modal-card">
-      <button class="modal-close" id="modalClose" type="button">닫기</button>
+      <button class="modal-close" id="modalClose" type="button">✖</button>
 
       <div class="modal-header">
         <div class="modal-title" id="modalTitle">추첨 중</div>
@@ -505,38 +505,42 @@
       </div>
 
       <div class="modal-body">
-  <!-- 1단계: 스크래치/뜯기 창 -->
-  <div class="modal-stage modal-stage-peel" id="modalStagePeel">
-    <div class="modal-number-stage">
-      <div class="modal-number" id="modalResultNumber"></div>
+        <!-- 1단계: 스크래치/뜯기 창 -->
+        <div class="modal-stage modal-stage-peel" id="modalStagePeel">
+          <div class="modal-peel-wrap">
+            <div class="modal-number-stage">
+              <div class="modal-number" id="modalResultNumber"></div>
 
-      <div class="modal-paper" id="modalPaper">
-        <img id="modalPaperImg" src="./assets/paper.png" alt="" />
+              <div class="modal-paper" id="modalPaper">
+                <img id="modalPaperImg" src="./assets/paper.png" alt="" />
+              </div>
+            </div>
+
+            <div class="modal-peel-ui">
+              <div class="modal-peel-caption">~ 두근두근❣ 뽑기 오픈 중 ~</div>
+              <button class="modal-auto-peel-btn" id="btnAutoPeel" type="button">자동 오픈 !</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- 2단계: 결과 창 -->
+        <div class="modal-stage modal-stage-result" id="modalStageResult">
+          <div class="modal-result-panel" id="modalResultPanel">
+            <div class="reveal-big" id="modalRevealBig"></div>
+            <div class="reveal-small" id="modalRevealSmall"></div>
+
+            <div class="modal-media">
+              <img id="modalResultImg" class="is-hidden" alt="결과 이미지" />
+            </div>
+          </div>
+        </div>
+
+        <div class="confetti-layer" id="modalConfetti"></div>
       </div>
     </div>
   </div>
 
-  <!-- 2단계: 결과 창 -->
-  <div class="modal-stage modal-stage-result" id="modalStageResult">
-    <div class="modal-result-panel" id="modalResultPanel">
-      <div class="reveal-big" id="modalRevealBig"></div>
-      <div class="reveal-small" id="modalRevealSmall"></div>
-
-      <div class="modal-media">
-        <img id="modalResultImg" class="is-hidden" alt="결과 이미지" />
-      </div>
-    </div>
-  </div>
-
-  <div class="confetti-layer" id="modalConfetti"></div>
-</div>
-
-      <div class="modal-footer">
-        <button class="modal-ok" id="modalOk" type="button">확인</button>
-      </div>
-    </div>
-  </div>
-    <!-- 상품 미리보기 모달 -->
+  <!-- 상품 미리보기 모달 -->
   <div class="preview-modal" id="previewModal" aria-hidden="true">
     <div class="preview-backdrop" id="previewBackdrop"></div>
 
@@ -553,7 +557,8 @@
       </div>
     </div>
   </div>
+
   <div id="globalConfetti"></div>
-<script src="./app.js"></script>
+  <script src="./app.js"></script>
 </body>
 </html>
