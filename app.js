@@ -292,6 +292,46 @@
       claimed: !!p.claimed,
     };
   }
+function burstGlobalConfetti(amount = 160){
+
+  const container = document.getElementById("globalConfetti");
+  if(!container) return;
+
+  container.innerHTML = "";
+
+  const colors = [
+    "#ffd700",
+    "#ff7edb",
+    "#7ecbff",
+    "#ffffff",
+    "#7effc1",
+    "#ff9c6a"
+  ];
+
+  for(let i=0;i<amount;i++){
+
+    const c = document.createElement("div");
+    c.className = "global-confetti";
+
+    c.style.left = Math.random()*100 + "vw";
+    c.style.background = colors[Math.floor(Math.random()*colors.length)];
+
+    c.style.animationDuration =
+      (4 + Math.random()*4) + "s";
+
+    c.style.animationDelay =
+      (Math.random()*1.5) + "s";
+
+    c.style.transform =
+      `rotate(${Math.random()*360}deg)`;
+
+    container.appendChild(c);
+  }
+
+  setTimeout(()=>{
+    container.innerHTML="";
+  },9000);
+}
 
   function exportState() {
     return {
@@ -1204,6 +1244,13 @@ function injectExtraUi() {
     }
   `;
   document.head.appendChild(style);
+
+  if (drawModal && !drawModal.querySelector(".modal-flash")) {
+    const flash = document.createElement("div");
+    flash.className = "modal-flash";
+    const modalBody = drawModal.querySelector(".modal-body");
+    if (modalBody) modalBody.appendChild(flash);
+  }
 }
 
 function ensureResultTierBadge() {
@@ -1311,29 +1358,71 @@ function fillResultPanel(data, options = {}) {
     return;
   }
 
-  if (hasLastOne) {
+     if (hasLastOne) {
     applyTierNeon(1);
     applyTierSpecialFx(1);
+    applyRewardFxLevel("ultra");
+
     card.classList.add("fx-lastone-boom");
-    burstConfetti(180);
+
+    runModalFlash(4, 120);
+
+    burstConfetti(280);
+    setTimeout(() => burstConfetti(220), 200);
+    setTimeout(() => burstConfetti(180), 400);
+
+    setTimeout(() => {
+      burstGlobalConfetti(240);
+    }, 250);
+
     playLastOneSound();
 
     setTimeout(() => {
       card.classList.remove("fx-lastone-boom");
-    }, 1200);
+    }, 1400);
     return;
   }
 
   applyTierNeon(tier);
 
   if (tier === 1) {
+    applyRewardFxLevel("super");
     applyTierSpecialFx(1);
-    burstConfetti(120);
+    card.classList.add("fx-lastone-boom");
+
+    runModalFlash(4, 120);
+
+    burstConfetti(280);
+    setTimeout(() => burstConfetti(220), 200);
+    setTimeout(() => burstConfetti(180), 400);
+
+    setTimeout(() => {
+      burstGlobalConfetti(220);
+    }, 250);
+
     playFanfare();
+
+    setTimeout(() => {
+      card.classList.remove("fx-lastone-boom");
+    }, 1400);
   } else if (tier === 2) {
+    applyRewardFxLevel("high");
     applyTierSpecialFx(2);
-    burstConfetti(70);
+    runModalFlash(2, 180);
+    burstConfetti(110);
+    setTimeout(() => burstConfetti(55), 240);
     playFanfare();
+  } else if (tier === 3) {
+    applyRewardFxLevel("mid");
+    applyTierSpecialFx(3);
+    runModalFlash(1, 120);
+    burstConfetti(60);
+  } else if (tier === 4) {
+    applyRewardFxLevel("low");
+    runModalFlash(1, 120);
+    burstConfetti(28);
+  } else {
+    applyRewardFxLevel("low");
   }
 }
 
@@ -1487,18 +1576,23 @@ let extraUiInjected = false;
   function resetDrawModalState() {
     const card = drawModal?.querySelector(".modal-card");
     if (card) {
-      card.classList.remove(
-        "peel",
-        "reveal-text-on",
-        "fx-gold",
-        "fx-purple",
-        "fx-blue",
-        "fx-green",
-        "fx-flash",
-        "fx-shake",
-        "fx-ripple",
-        "fx-lastone-boom"
-      );
+        card.classList.remove(
+  "peel",
+  "reveal-text-on",
+  "fx-gold",
+  "fx-purple",
+  "fx-blue",
+  "fx-green",
+  "fx-flash",
+  "fx-shake",
+  "fx-ripple",
+  "fx-lastone-boom",
+  "fx-ultra",
+  "fx-super",
+  "fx-high",
+  "fx-mid",
+  "fx-low"
+);
     }
 
     if (modalStagePeel) modalStagePeel.style.display = "block";
@@ -1536,6 +1630,17 @@ let extraUiInjected = false;
     peelCurrentX = 0;
     peelDone = false;
     pendingRevealData = null;
+
+        const flash = getModalFlashEl();
+if (flash) {
+  flash.classList.remove("on");
+}
+
+const globalConfetti = document.getElementById("globalConfetti");
+if (globalConfetti) {
+  globalConfetti.innerHTML = "";
+}
+    
   }
 
   function showResultPanel() {
@@ -1681,30 +1786,168 @@ let extraUiInjected = false;
   }
 
   function burstConfetti(count = 44) {
-    if (!modalConfetti) return;
-    modalConfetti.innerHTML = "";
+  if (!modalConfetti) return;
+  modalConfetti.innerHTML = "";
 
-    const colors = [
-      "rgba(255,215,0,.95)",
-      "rgba(177,76,255,.95)",
-      "rgba(61,168,255,.95)",
-      "rgba(255,255,255,.85)",
-      "rgba(0,255,136,.90)",
-    ];
+  const colors = [
+    "rgba(255,215,0,.95)",
+    "rgba(177,76,255,.95)",
+    "rgba(61,168,255,.95)",
+    "rgba(255,255,255,.88)",
+    "rgba(0,255,136,.92)",
+    "rgba(255,120,210,.95)",
+  ];
 
-    for (let i = 0; i < count; i++) {
-      const c = document.createElement("div");
-      c.className = "confetti";
-      c.style.left = `${Math.random() * 100}%`;
-      c.style.background = colors[Math.floor(Math.random() * colors.length)];
-      c.style.animationDuration = `${650 + Math.random() * 450}ms`;
-      modalConfetti.appendChild(c);
-    }
+  const width = modalConfetti.clientWidth || 720;
+  const height = modalConfetti.clientHeight || 420;
 
-    setTimeout(() => {
-      if (modalConfetti) modalConfetti.innerHTML = "";
-    }, 1500);
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+
+    const fromTop = Math.random() < 0.7;
+    const startX = Math.random() * width;
+    const startY = fromTop ? -20 - Math.random() * 80 : Math.random() * (height * 0.25);
+
+    c.style.left = `${startX}px`;
+    c.style.top = `${startY}px`;
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.width = `${8 + Math.random() * 8}px`;
+    c.style.height = `${10 + Math.random() * 12}px`;
+    c.style.borderRadius = `${1 + Math.random() * 4}px`;
+    c.style.animationDuration = `${900 + Math.random() * 900}ms`;
+    c.style.transform = `translateY(0) rotate(${Math.random() * 120}deg)`;
+
+    const driftX = (Math.random() - 0.5) * 260;
+    const fallY = height + 120 + Math.random() * 140;
+    const rotate = 480 + Math.random() * 540;
+
+    c.animate(
+      [
+        {
+          transform: `translate(0px, 0px) rotate(0deg) scale(1)`,
+          opacity: 1,
+        },
+        {
+          transform: `translate(${driftX}px, ${fallY}px) rotate(${rotate}deg) scale(.92)`,
+          opacity: 0,
+        },
+      ],
+      {
+        duration: 900 + Math.random() * 900,
+        easing: "cubic-bezier(.18,.7,.2,1)",
+        fill: "forwards",
+      }
+    );
+
+    modalConfetti.appendChild(c);
   }
+
+  setTimeout(() => {
+    if (modalConfetti) modalConfetti.innerHTML = "";
+  }, 2400);
+}
+
+function burstGlobalConfetti(amount = 160) {
+  const container = document.getElementById("globalConfetti");
+  if (!container) return;
+
+  container.innerHTML = "";
+
+  const colors = [
+    "#ffd700",
+    "#ff7edb",
+    "#7ecbff",
+    "#ffffff",
+    "#7effc1",
+    "#ff9c6a"
+  ];
+
+  for (let i = 0; i < amount; i++) {
+    const c = document.createElement("div");
+    c.className = "global-confetti";
+
+    c.style.left = Math.random() * 100 + "vw";
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.animationDuration = (4 + Math.random() * 4) + "s";
+    c.style.animationDelay = (Math.random() * 1.5) + "s";
+    c.style.transform = `rotate(${Math.random() * 360}deg)`;
+
+    container.appendChild(c);
+  }
+
+  setTimeout(() => {
+    container.innerHTML = "";
+  }, 9000);
+}
+
+  function getModalFlashEl() {
+  return drawModal?.querySelector(".modal-flash") || null;
+}
+
+function runModalFlash(times = 1, gap = 120) {
+  const flash = getModalFlashEl();
+  if (!flash) return;
+
+  let count = 0;
+  const playOnce = () => {
+    flash.classList.remove("on");
+    void flash.offsetWidth;
+    flash.classList.add("on");
+    count += 1;
+
+    if (count < times) {
+      setTimeout(playOnce, gap);
+    }
+  };
+
+  playOnce();
+}
+
+function applyRewardFxLevel(level) {
+  const card = drawModal?.querySelector(".modal-card");
+  if (!card) return;
+
+  card.classList.remove("fx-ultra", "fx-super", "fx-high", "fx-mid", "fx-low");
+
+  if (level === "ultra") card.classList.add("fx-ultra");
+  else if (level === "super") card.classList.add("fx-super");
+  else if (level === "high") card.classList.add("fx-high");
+  else if (level === "mid") card.classList.add("fx-mid");
+  else card.classList.add("fx-low");
+}
+
+function runModalFlash(times = 1, gap = 120) {
+  const flash = getModalFlashEl();
+  if (!flash) return;
+
+  let count = 0;
+  const playOnce = () => {
+    flash.classList.remove("on");
+    void flash.offsetWidth;
+    flash.classList.add("on");
+    count += 1;
+
+    if (count < times) {
+      setTimeout(playOnce, gap);
+    }
+  };
+
+  playOnce();
+}
+
+function applyRewardFxLevel(level) {
+  const card = drawModal?.querySelector(".modal-card");
+  if (!card) return;
+
+  card.classList.remove("fx-ultra", "fx-super", "fx-high", "fx-mid", "fx-low");
+
+  if (level === "ultra") card.classList.add("fx-ultra");
+  else if (level === "super") card.classList.add("fx-super");
+  else if (level === "high") card.classList.add("fx-high");
+  else if (level === "mid") card.classList.add("fx-mid");
+  else card.classList.add("fx-low");
+}
 
   function resolveDrawerName() {
     const manualName = (drawNicknameInput?.value || "").trim();

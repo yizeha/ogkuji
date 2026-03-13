@@ -2398,3 +2398,517 @@ label{
 .prizecard.previewable *{
   pointer-events: none;
 }
+
+/* ========================================
+   결과 연출 강화팩
+======================================== */
+
+/* 전체 화면 플래시/오로라 레이어 */
+.modal-body{
+  overflow: hidden;
+}
+
+.modal-body::before{
+  content:"";
+  position:absolute;
+  inset:-15%;
+  pointer-events:none;
+  z-index: 1;
+  opacity: 0;
+  background:
+    radial-gradient(circle at 20% 20%, rgba(255,255,255,.22), transparent 18%),
+    radial-gradient(circle at 80% 18%, rgba(255,120,220,.18), transparent 20%),
+    radial-gradient(circle at 50% 78%, rgba(120,180,255,.16), transparent 24%),
+    radial-gradient(circle at 25% 75%, rgba(255,220,120,.14), transparent 18%);
+  filter: blur(18px);
+  transition: opacity .25s ease;
+}
+
+.modal-card.fx-ultra .modal-body::before,
+.modal-card.fx-super .modal-body::before,
+.modal-card.fx-high .modal-body::before,
+.modal-card.fx-mid .modal-body::before,
+.modal-card.fx-low .modal-body::before{
+  opacity: 1;
+  animation: modalAuroraSweep 3.2s linear infinite;
+}
+
+@keyframes modalAuroraSweep{
+  0%{
+    transform: translateX(-2%) translateY(0%) scale(1);
+  }
+  50%{
+    transform: translateX(2%) translateY(-1.5%) scale(1.04);
+  }
+  100%{
+    transform: translateX(-2%) translateY(0%) scale(1);
+  }
+}
+
+/* 공용 반짝이 */
+.modal-result-panel::after{
+  animation-duration: 3.4s;
+}
+
+.modal-result-panel.show{
+  animation: resultFloatStrong 2.6s ease-in-out infinite;
+}
+
+@keyframes resultFloatStrong{
+  0%,100%{
+    transform: translateY(0) scale(1);
+  }
+  50%{
+    transform: translateY(-8px) scale(1.01);
+  }
+}
+
+/* 이미지도 더 살아 움직이게 */
+.modal-media img{
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.10) inset,
+    0 10px 32px rgba(0,0,0,.34);
+  transition: transform .25s ease, box-shadow .25s ease, filter .25s ease;
+}
+
+.modal-result-panel.show .modal-media img{
+  animation: rewardHover 2.3s ease-in-out infinite;
+}
+
+@keyframes rewardHover{
+  0%,100%{
+    transform: translateY(0) scale(1);
+  }
+  50%{
+    transform: translateY(-5px) scale(1.02);
+  }
+}
+
+/* 텍스트도 좀 더 번쩍 */
+.reveal-big{
+  letter-spacing: .5px;
+}
+
+.modal-result-panel.show .reveal-big{
+  animation: revealGlowPulse 1.8s ease-in-out infinite;
+}
+
+@keyframes revealGlowPulse{
+  0%,100%{
+    text-shadow:
+      0 2px 10px rgba(0,0,0,.7),
+      0 0 12px rgba(255,255,255,.18);
+  }
+  50%{
+    text-shadow:
+      0 2px 14px rgba(0,0,0,.76),
+      0 0 20px rgba(255,255,255,.28),
+      0 0 36px rgba(255,220,120,.18);
+  }
+}
+
+/* 티어 배지 강화 */
+.result-tier-badge{
+  position: relative;
+  overflow: hidden;
+}
+
+.result-tier-badge::after{
+  content:"";
+  position:absolute;
+  inset:0;
+  background: linear-gradient(
+    120deg,
+    transparent 0%,
+    rgba(255,255,255,.06) 30%,
+    rgba(255,255,255,.34) 48%,
+    rgba(255,255,255,.08) 62%,
+    transparent 100%
+  );
+  transform: translateX(-120%);
+  animation: badgeShine 2.6s linear infinite;
+}
+
+@keyframes badgeShine{
+  100%{
+    transform: translateX(120%);
+  }
+}
+
+/* 등급별 카드 강도 */
+.modal-card.fx-ultra{
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.30) inset,
+    0 0 60px rgba(255,120,210,.38),
+    0 0 120px rgba(255,220,120,.32),
+    0 0 220px rgba(120,180,255,.24),
+    0 28px 90px rgba(0,0,0,.76);
+  animation:
+    ultraGlow 1.2s ease-in-out infinite,
+    screenShakeSoft .55s ease-in-out infinite;
+}
+
+.modal-card.fx-super{
+  box-shadow:
+    0 0 0 1px rgba(255,225,130,.26) inset,
+    0 0 42px rgba(255,210,90,.30),
+    0 0 90px rgba(255,160,40,.20),
+    0 28px 90px rgba(0,0,0,.74);
+  animation: superGlow 1.35s ease-in-out infinite;
+}
+
+.modal-card.fx-high{
+  box-shadow:
+    0 0 0 1px rgba(255,140,225,.22) inset,
+    0 0 34px rgba(255,120,220,.24),
+    0 0 72px rgba(180,120,255,.16),
+    0 28px 90px rgba(0,0,0,.72);
+  animation: highGlow 1.6s ease-in-out infinite;
+}
+
+.modal-card.fx-mid{
+  box-shadow:
+    0 0 0 1px rgba(110,180,255,.18) inset,
+    0 0 24px rgba(110,180,255,.18),
+    0 0 54px rgba(110,180,255,.10),
+    0 28px 90px rgba(0,0,0,.70);
+  animation: midGlow 1.9s ease-in-out infinite;
+}
+
+.modal-card.fx-low{
+  box-shadow:
+    0 0 0 1px rgba(120,255,180,.14) inset,
+    0 0 18px rgba(120,255,180,.12),
+    0 0 36px rgba(255,255,255,.08),
+    0 28px 90px rgba(0,0,0,.68);
+  animation: lowGlow 2.2s ease-in-out infinite;
+}
+
+@keyframes ultraGlow{
+  0%,100%{
+    filter: brightness(1) saturate(1);
+  }
+  50%{
+    filter: brightness(1.18) saturate(1.16);
+  }
+}
+
+@keyframes superGlow{
+  0%,100%{
+    filter: brightness(1) saturate(1);
+  }
+  50%{
+    filter: brightness(1.12) saturate(1.1);
+  }
+}
+
+@keyframes highGlow{
+  0%,100%{
+    filter: brightness(1) saturate(1);
+  }
+  50%{
+    filter: brightness(1.08) saturate(1.08);
+  }
+}
+
+@keyframes midGlow{
+  0%,100%{
+    filter: brightness(1);
+  }
+  50%{
+    filter: brightness(1.05);
+  }
+}
+
+@keyframes lowGlow{
+  0%,100%{
+    filter: brightness(1);
+  }
+  50%{
+    filter: brightness(1.03);
+  }
+}
+
+/* 라스트원 / A상용 화면 흔들림 */
+@keyframes screenShakeSoft{
+  0%,100%{ transform: translate(-50%, -50%); }
+  10%{ transform: translate(calc(-50% - 3px), calc(-50% + 1px)) rotate(-0.2deg); }
+  20%{ transform: translate(calc(-50% + 3px), calc(-50% - 2px)) rotate(0.2deg); }
+  30%{ transform: translate(calc(-50% - 2px), calc(-50% + 2px)) rotate(-0.15deg); }
+  40%{ transform: translate(calc(-50% + 2px), calc(-50% - 1px)) rotate(0.15deg); }
+  50%{ transform: translate(calc(-50% - 3px), calc(-50% + 2px)) rotate(-0.2deg); }
+  60%{ transform: translate(calc(-50% + 3px), calc(-50% - 2px)) rotate(0.2deg); }
+  70%{ transform: translate(calc(-50% - 2px), calc(-50% + 1px)) rotate(-0.12deg); }
+  80%{ transform: translate(calc(-50% + 2px), calc(-50% - 2px)) rotate(0.12deg); }
+  90%{ transform: translate(calc(-50% - 1px), calc(-50% + 1px)) rotate(-0.08deg); }
+}
+
+/* 결과 패널 자체 빛 강화 */
+.modal-result-panel.tier-a{
+  box-shadow:
+    0 0 0 1px rgba(255,220,120,.38) inset,
+    0 0 46px rgba(255,220,120,.36),
+    0 0 110px rgba(255,170,30,.28);
+}
+
+.modal-result-panel.tier-b{
+  box-shadow:
+    0 0 0 1px rgba(255,140,225,.24) inset,
+    0 0 34px rgba(255,120,220,.22),
+    0 0 78px rgba(170,120,255,.15);
+}
+
+.modal-result-panel.tier-c{
+  box-shadow:
+    0 0 0 1px rgba(110,180,255,.18) inset,
+    0 0 24px rgba(110,180,255,.16),
+    0 0 56px rgba(110,180,255,.10);
+}
+
+.modal-result-panel.tier-d{
+  box-shadow:
+    0 0 0 1px rgba(110,255,170,.36) inset,
+    0 0 18px rgba(110,255,170,.24),
+    0 0 42px rgba(110,255,170,.18);
+}
+
+.modal-result-panel.tier-e{
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.34) inset,
+    0 0 14px rgba(255,255,255,.20),
+    0 0 28px rgba(255,255,255,.16);
+}
+
+.modal-result-panel.lastone-result{
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.34) inset,
+    0 0 54px rgba(255,120,210,.34),
+    0 0 120px rgba(255,220,120,.30),
+    0 0 200px rgba(120,180,255,.24);
+}
+
+/* 플래시 */
+.modal-flash{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index: 8;
+  opacity:0;
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,.46), rgba(255,255,255,.08) 34%, transparent 62%);
+}
+
+.modal-flash.on{
+  animation: modalFlashBurst .65s ease-out;
+}
+
+@keyframes modalFlashBurst{
+  0%{
+    opacity: 0;
+    transform: scale(.92);
+  }
+  18%{
+    opacity: .95;
+    transform: scale(1);
+  }
+  100%{
+    opacity: 0;
+    transform: scale(1.12);
+  }
+}
+.modal-card.fx-super{
+  box-shadow:
+    0 0 0 1px rgba(255,225,130,.26) inset,
+    0 0 42px rgba(255,210,90,.30),
+    0 0 90px rgba(255,160,40,.20),
+    0 28px 90px rgba(0,0,0,.74);
+  animation:
+    superGlow 1.35s ease-in-out infinite,
+    screenShakeSoft .45s ease-in-out 2;
+}
+
+.modal-card.fx-high{
+  box-shadow:
+    0 0 0 1px rgba(255,140,225,.22) inset,
+    0 0 34px rgba(255,120,220,.24),
+    0 0 72px rgba(180,120,255,.16),
+    0 28px 90px rgba(0,0,0,.72);
+  animation:
+    highGlow 1.6s ease-in-out infinite,
+    screenShakeSoft .5s ease-in-out 2;
+}
+
+.modal-card.fx-mid{
+  box-shadow:
+    0 0 0 1px rgba(110,180,255,.18) inset,
+    0 0 24px rgba(110,180,255,.18),
+    0 0 54px rgba(110,180,255,.10),
+    0 28px 90px rgba(0,0,0,.70);
+  animation:
+    midGlow 1.9s ease-in-out infinite,
+    screenShakeSoft .55s ease-in-out 1;
+}
+
+.modal-card.fx-ultra{
+  animation:
+    ultraGlow 1.2s ease-in-out infinite,
+    screenShakeSoft .35s ease-in-out 2;
+}
+/* =====================================
+   FULL SCREEN CONFETTI (LAST ONE)
+===================================== */
+
+#globalConfetti{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:200;
+  overflow:hidden;
+}
+
+.global-confetti{
+  position:absolute;
+  width:10px;
+  height:14px;
+  opacity:.95;
+  border-radius:2px;
+  animation: globalConfettiFall linear forwards;
+}
+
+@keyframes globalConfettiFall{
+  0%{
+    transform: translateY(-120px) rotate(0deg);
+    opacity:1;
+  }
+
+  80%{
+    opacity:1;
+  }
+
+  100%{
+    transform: translateY(110vh) rotate(720deg);
+    opacity:0;
+  }
+}
+
+/* =====================================
+   A상 / 라스트원 초강화 연출
+===================================== */
+
+#globalConfetti{
+  position:fixed;
+  inset:0;
+  pointer-events:none;
+  z-index:200;
+  overflow:hidden;
+}
+
+.global-confetti{
+  position:absolute;
+  width:10px;
+  height:14px;
+  opacity:.95;
+  border-radius:2px;
+  animation: globalConfettiFall linear forwards;
+}
+
+@keyframes globalConfettiFall{
+  0%{
+    transform: translateY(-120px) rotate(0deg);
+    opacity:1;
+  }
+  80%{
+    opacity:1;
+  }
+  100%{
+    transform: translateY(110vh) rotate(720deg);
+    opacity:0;
+  }
+}
+
+@keyframes screenShakeSoft{
+  0%,100%{ transform: translate(-50%, -50%); }
+  10%{ transform: translate(calc(-50% - 3px), calc(-50% + 1px)) rotate(-0.2deg); }
+  20%{ transform: translate(calc(-50% + 3px), calc(-50% - 2px)) rotate(0.2deg); }
+  30%{ transform: translate(calc(-50% - 2px), calc(-50% + 2px)) rotate(-0.15deg); }
+  40%{ transform: translate(calc(-50% + 2px), calc(-50% - 1px)) rotate(0.15deg); }
+  50%{ transform: translate(calc(-50% - 3px), calc(-50% + 2px)) rotate(-0.2deg); }
+  60%{ transform: translate(calc(-50% + 3px), calc(-50% - 2px)) rotate(0.2deg); }
+  70%{ transform: translate(calc(-50% - 2px), calc(-50% + 1px)) rotate(-0.12deg); }
+  80%{ transform: translate(calc(-50% + 2px), calc(-50% - 2px)) rotate(0.12deg); }
+  90%{ transform: translate(calc(-50% - 1px), calc(-50% + 1px)) rotate(-0.08deg); }
+}
+
+.modal-card.fx-ultra{
+  box-shadow:
+    0 0 0 1px rgba(255,255,255,.30) inset,
+    0 0 60px rgba(255,120,210,.38),
+    0 0 120px rgba(255,220,120,.32),
+    0 0 220px rgba(120,180,255,.24),
+    0 28px 90px rgba(0,0,0,.76);
+  animation:
+    ultraGlow 1.2s ease-in-out infinite,
+    screenShakeSoft .35s ease-in-out 3;
+}
+
+.modal-card.fx-super{
+  box-shadow:
+    0 0 0 1px rgba(255,225,130,.26) inset,
+    0 0 42px rgba(255,210,90,.30),
+    0 0 90px rgba(255,160,40,.20),
+    0 28px 90px rgba(0,0,0,.74);
+  animation:
+    superGlow 1.35s ease-in-out infinite,
+    screenShakeSoft .45s ease-in-out 3;
+}
+
+.modal-card.fx-high{
+  box-shadow:
+    0 0 0 1px rgba(255,140,225,.22) inset,
+    0 0 34px rgba(255,120,220,.24),
+    0 0 72px rgba(180,120,255,.16),
+    0 28px 90px rgba(0,0,0,.72);
+  animation:
+    highGlow 1.6s ease-in-out infinite,
+    screenShakeSoft .5s ease-in-out 3;
+}
+
+.modal-card.fx-mid{
+  box-shadow:
+    0 0 0 1px rgba(110,180,255,.18) inset,
+    0 0 24px rgba(110,180,255,.18),
+    0 0 54px rgba(110,180,255,.10),
+    0 28px 90px rgba(0,0,0,.70);
+  animation:
+    midGlow 1.9s ease-in-out infinite,
+    screenShakeSoft .55s ease-in-out 1;
+}
+
+.modal-flash{
+  position:absolute;
+  inset:0;
+  pointer-events:none;
+  z-index:8;
+  opacity:0;
+  background:
+    radial-gradient(circle at center, rgba(255,255,255,.46), rgba(255,255,255,.08) 34%, transparent 62%);
+}
+
+.modal-flash.on{
+  animation: modalFlashBurst .65s ease-out;
+}
+
+@keyframes modalFlashBurst{
+  0%{
+    opacity:0;
+    transform:scale(.92);
+  }
+  18%{
+    opacity:.95;
+    transform:scale(1);
+  }
+  100%{
+    opacity:0;
+    transform:scale(1.12);
+  }
+}
