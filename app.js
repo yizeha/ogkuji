@@ -1244,8 +1244,12 @@ let pendingRevealData = null;
     peelDragging = true;
     peelStartX = clientX - peelCurrentX;
     modalPaper.classList.add("dragging");
+
+    playPeelSound();
   };
 
+
+  
   const moveDrag = (clientX) => {
     if (!peelDragging || peelDone) return;
 
