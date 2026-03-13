@@ -30,16 +30,16 @@
   }
 
   function createDefaultSettings() {
-  return {
-    totalTickets: CONFIG.defaultTotalTickets,
-    kujiTitle: "오지상 쿠지",
-    lastOnePrize: null,
-    priceText: "14,000원",
-    accountText: "기업은행 153-084786-01019 양*준",
-    soundVolume: 0.35,
-    soundMuted: false,
-  };
-}
+    return {
+      totalTickets: CONFIG.defaultTotalTickets,
+      kujiTitle: "오지상 쿠지",
+      lastOnePrize: null,
+      priceText: "14,000원",
+      accountText: "기업은행 153-084786-01019 양*준",
+      soundVolume: 0.35,
+      soundMuted: false,
+    };
+  }
 
   function createBoardMeta(name = "기본 쿠지판") {
     return {
@@ -110,7 +110,6 @@
     editingPrizeId: null,
   };
 
-  const appRoot = $("#appRoot");
   const board = $("#board");
 
   const btnReset = $("#btnReset");
@@ -127,17 +126,14 @@
   const btnCloseAdmin = $("#btnCloseAdmin");
 
   const totalTicketsInput = $("#totalTicketsInput");
-  const btnApplyTickets = $("#btnApplyTickets");
-
   const kujiTitleText = $("#kujiTitleText");
   const kujiTitleInput = $("#kujiTitleInput");
-  const btnApplyTitle = $("#btnApplyTitle");
+  const priceInput = $("#priceInput");
+  const btnApplyBasicSettings = $("#btnApplyBasicSettings");
 
   const queueInput = $("#queueInput");
   const btnAddQueue = $("#btnAddQueue");
   const queueList = $("#queueList");
-
-  const fanfare = $("#fanfare");
 
   const prizeNameInput = $("#prizeNameInput");
   const prizeTierSelect = $("#prizeTierSelect");
@@ -177,10 +173,11 @@
 
   const priceText = $("#priceText");
   const accountText = $("#accountText");
-  const boardLogo = $("#boardLogo");
+  const topBoardLogo = $("#topBoardLogo");
   const topLogo = $("#topLogo");
-  const priceInput = $("#priceInput");
-const btnApplyPrice = $("#btnApplyPrice");
+
+  const btnToggleSound = $("#btnToggleSound");
+  const soundVolumeRange = $("#soundVolumeRange");
 
   const drawModal = $("#drawModal");
   const modalBackdrop = $("#modalBackdrop");
@@ -211,6 +208,7 @@ const btnApplyPrice = $("#btnApplyPrice");
   const btnCancelPrizeEdit = $("#btnCancelPrizeEdit");
   const editPrizeHint = $("#editPrizeHint");
 
+  const fanfare = $("#fanfare");
   const peelSound = $("#peelSound");
   const lastOneSound = $("#lastOneSound");
   const lowTierSound = $("#lowTierSound");
@@ -220,8 +218,13 @@ const btnApplyPrice = $("#btnApplyPrice");
   const modalPaperImg = $("#modalPaperImg");
   const modalResultPanel = $("#modalResultPanel");
 
-  const btnToggleSound = $("#btnToggleSound");
-const soundVolumeRange = $("#soundVolumeRange");
+  let peelDragging = false;
+  let peelStartX = 0;
+  let peelCurrentX = 0;
+  let peelDone = false;
+  let pendingRevealData = null;
+  let currentDrawResolver = null;
+  let extraUiInjected = false;
 
   if (modalResultImg) {
     modalResultImg.onerror = () => {
@@ -300,46 +303,6 @@ const soundVolumeRange = $("#soundVolumeRange");
       claimed: !!p.claimed,
     };
   }
-function burstGlobalConfetti(amount = 160){
-
-  const container = document.getElementById("globalConfetti");
-  if(!container) return;
-
-  container.innerHTML = "";
-
-  const colors = [
-    "#ffd700",
-    "#ff7edb",
-    "#7ecbff",
-    "#ffffff",
-    "#7effc1",
-    "#ff9c6a"
-  ];
-
-  for(let i=0;i<amount;i++){
-
-    const c = document.createElement("div");
-    c.className = "global-confetti";
-
-    c.style.left = Math.random()*100 + "vw";
-    c.style.background = colors[Math.floor(Math.random()*colors.length)];
-
-    c.style.animationDuration =
-      (4 + Math.random()*4) + "s";
-
-    c.style.animationDelay =
-      (Math.random()*1.5) + "s";
-
-    c.style.transform =
-      `rotate(${Math.random()*360}deg)`;
-
-    container.appendChild(c);
-  }
-
-  setTimeout(()=>{
-    container.innerHTML="";
-  },9000);
-}
 
   function exportState() {
     return {
@@ -374,12 +337,12 @@ function burstGlobalConfetti(amount = 160){
     state.settings.accountText = state.settings.accountText || "기업은행 153-084786-01019 양*준";
     state.settings.lastOnePrize = normalizeLastOnePrize(state.settings.lastOnePrize);
 
-if (typeof state.settings.soundVolume !== "number") {
-  state.settings.soundVolume = 0.35;
-}
-if (typeof state.settings.soundMuted !== "boolean") {
-  state.settings.soundMuted = false;
-}
+    if (typeof state.settings.soundVolume !== "number") {
+      state.settings.soundVolume = 0.35;
+    }
+    if (typeof state.settings.soundMuted !== "boolean") {
+      state.settings.soundMuted = false;
+    }
 
     if (Array.isArray(payload?.prizes) && payload.prizes.length > 0) {
       state.prizes = payload.prizes.map(normalizePrize);
@@ -394,30 +357,6 @@ if (typeof state.settings.soundMuted !== "boolean") {
     state.prizes.sort((a, b) => a.tier - b.tier);
     state.ticketResults = payload?.ticketResults || {};
   }
-
-  function getAllAudioEls() {
-  return [fanfare, peelSound, lastOneSound, lowTierSound].filter(Boolean);
-}
-
-function applySoundSettings() {
-  const volume = state.settings.soundMuted ? 0 : state.settings.soundVolume;
-
-  getAllAudioEls().forEach((audio) => {
-    try {
-      audio.volume = Math.max(0, Math.min(1, volume));
-      audio.muted = !!state.settings.soundMuted;
-    } catch {}
-  });
-
-  if (soundVolumeRange) {
-    soundVolumeRange.value = String(Math.round((state.settings.soundVolume || 0) * 100));
-  }
-
-  if (btnToggleSound) {
-    btnToggleSound.textContent = state.settings.soundMuted ? "🔇 음소거" : "🔊 사운드";
-    btnToggleSound.classList.toggle("muted", !!state.settings.soundMuted);
-  }
-}
 
   function getCurrentBoard() {
     return store.boards[store.currentBoardId];
@@ -480,13 +419,42 @@ function applySoundSettings() {
     } catch {}
   }
 
+  function getAllAudioEls() {
+    return [fanfare, peelSound, lastOneSound, lowTierSound].filter(Boolean);
+  }
+
+  function applySoundSettings() {
+    const volume = state.settings.soundMuted ? 0 : state.settings.soundVolume;
+
+    getAllAudioEls().forEach((audio) => {
+      try {
+        audio.volume = Math.max(0, Math.min(1, volume));
+        audio.muted = !!state.settings.soundMuted;
+      } catch {}
+    });
+
+    if (soundVolumeRange) {
+      soundVolumeRange.value = String(Math.round((state.settings.soundVolume || 0) * 100));
+    }
+
+    if (btnToggleSound) {
+      btnToggleSound.textContent = state.settings.soundMuted ? "🔇 음소거" : "🔊 사운드";
+      btnToggleSound.classList.toggle("muted", !!state.settings.soundMuted);
+    }
+  }
+
   function applyBoardVisual() {
     const current = getCurrentBoard();
     if (!current) return;
 
     document.body.style.backgroundImage = `url("${current.meta.bgImage || CONFIG.defaultBgImage}")`;
-    if (boardLogo) boardLogo.src = CONFIG.defaultBoardLogo;
-    if (topLogo) topLogo.src = CONFIG.defaultTopLogo;
+
+    if (topBoardLogo) {
+      topBoardLogo.src = CONFIG.defaultBoardLogo;
+    }
+    if (topLogo) {
+      topLogo.src = CONFIG.defaultTopLogo;
+    }
   }
 
   function rebuildBoardSelect() {
@@ -806,7 +774,7 @@ function applySoundSettings() {
 
     const nums = [...state.selectedNumbers].sort((a, b) => a - b);
     for (let i = 0; i < nums.length; i++) {
-      await startDraw(nums[i], { isBatch: nums.length > 1, index: i, total: nums.length });
+      await startDraw(nums[i]);
       if (i < nums.length - 1) {
         await sleep(250);
       }
@@ -1199,7 +1167,7 @@ function applySoundSettings() {
       row.appendChild(main);
       row.appendChild(time);
 
-        row.addEventListener("click", () => {
+      row.addEventListener("click", () => {
         openWinLogResult(item);
       });
 
@@ -1207,33 +1175,59 @@ function applySoundSettings() {
     });
   }
 
-  function stopPeelSound(){
-  if(!peelSound) return;
-
-  try{
-    peelSound.pause();
-    peelSound.currentTime = 0;
-  }catch{}
-}
-
-function playLowTierSound() {
-  if (!lowTierSound) return;
-  try {
-    stopAllRewardSounds();
-    lowTierSound.currentTime = 0;
-    lowTierSound.play().catch(() => {});
-  } catch {}
-}
-
-function stopAllRewardSounds() {
-  [fanfare, lastOneSound, lowTierSound].forEach((audio) => {
-    if (!audio) return;
+  function stopPeelSound() {
+    if (!peelSound) return;
     try {
-      audio.pause();
-      audio.currentTime = 0;
+      peelSound.pause();
+      peelSound.currentTime = 0;
     } catch {}
-  });
-}
+  }
+
+  function stopAllRewardSounds() {
+    [fanfare, lastOneSound, lowTierSound].forEach((audio) => {
+      if (!audio) return;
+      try {
+        audio.pause();
+        audio.currentTime = 0;
+      } catch {}
+    });
+  }
+
+  function playLowTierSound() {
+    if (!lowTierSound) return;
+    try {
+      stopAllRewardSounds();
+      lowTierSound.currentTime = 0;
+      lowTierSound.play().catch(() => {});
+    } catch {}
+  }
+
+  function playFanfare() {
+    if (!CONFIG.useFanfare || !fanfare) return;
+    try {
+      stopAllRewardSounds();
+      fanfare.currentTime = 0;
+      fanfare.play().catch(() => {});
+    } catch {}
+  }
+
+  function playLastOneSound() {
+    if (!lastOneSound) return;
+    try {
+      stopAllRewardSounds();
+      lastOneSound.currentTime = 0;
+      lastOneSound.play().catch(() => {});
+    } catch {}
+  }
+
+  function playPeelSound() {
+    if (!peelSound) return;
+    try {
+      stopPeelSound();
+      peelSound.currentTime = 0;
+      peelSound.play().catch(() => {});
+    } catch {}
+  }
 
   function renderProgress() {
     const total = state.settings.totalTickets;
@@ -1283,298 +1277,340 @@ function stopAllRewardSounds() {
       if (editPrizeSection) editPrizeSection.style.display = "none";
     }
   }
-function injectExtraUi() {
-  if (extraUiInjected) return;
-  extraUiInjected = true;
 
-  const style = document.createElement("style");
-  style.textContent = `
-    .result-tier-badge{
-      order: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 0 14px;
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-size: 18px;
-      font-weight: 900;
-      color: #fff6cf;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.18);
-      box-shadow: 0 6px 18px rgba(0,0,0,.18);
-      text-shadow: 0 2px 8px rgba(0,0,0,.45);
-    }
-    .winrow{
-      cursor: pointer;
-    }
-    .winrow:hover{
-      filter: brightness(1.05);
-    }
-  `;
-  document.head.appendChild(style);
+  function injectExtraUi() {
+    if (extraUiInjected) return;
+    extraUiInjected = true;
 
-  if (drawModal && !drawModal.querySelector(".modal-flash")) {
-    const flash = document.createElement("div");
-    flash.className = "modal-flash";
-    const modalBody = drawModal.querySelector(".modal-body");
-    if (modalBody) modalBody.appendChild(flash);
-  }
-}
-
-function ensureResultTierBadge() {
-  if (!modalResultPanel) return null;
-
-  let badge = modalResultPanel.querySelector(".result-tier-badge");
-  if (!badge) {
-    badge = document.createElement("div");
-    badge.className = "result-tier-badge";
-    modalResultPanel.prepend(badge);
-  }
-  return badge;
-}
-
-function setResultTierBadge(text) {
-  const badge = ensureResultTierBadge();
-  if (!badge) return;
-  badge.textContent = text || "";
-  badge.style.display = text ? "inline-flex" : "none";
-}
-
-function resolveCurrentDraw() {
-  if (typeof currentDrawResolver === "function") {
-    const fn = currentDrawResolver;
-    currentDrawResolver = null;
-    fn();
-  }
-}
-
-function fillResultPanel(data, options = {}) {
-  const {
-    prizeName,
-    tierText,
-    ticketNumber,
-    who,
-    prizeImg,
-    tier,
-    hasLastOne,
-  } = data;
-
-  const { withEffects = true } = options;
-
-  if (modalTitle) modalTitle.textContent = "결과 공개";
-  if (modalSub) modalSub.textContent = "";
-
-  setResultTierBadge(tierText || "");
-
-  if (modalRevealBig) {
-    modalRevealBig.textContent = prizeName || "";
-  }
-
-  if (modalRevealSmall) {
-    modalRevealSmall.innerHTML = `
-      <div class="result-meta-line">종이 ${ticketNumber}</div>
-      <div class="result-meta-line result-who">${who || "참여자"}</div>
+    const style = document.createElement("style");
+    style.textContent = `
+      .result-tier-badge{
+        order: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 0 14px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 18px;
+        font-weight: 900;
+        color: #fff6cf;
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.18);
+        box-shadow: 0 6px 18px rgba(0,0,0,.18);
+        text-shadow: 0 2px 8px rgba(0,0,0,.45);
+      }
+      .winrow{
+        cursor: pointer;
+      }
+      .winrow:hover{
+        filter: brightness(1.05);
+      }
     `;
+    document.head.appendChild(style);
+
+    if (drawModal && !drawModal.querySelector(".modal-flash")) {
+      const flash = document.createElement("div");
+      flash.className = "modal-flash";
+      const modalBody = drawModal.querySelector(".modal-body");
+      if (modalBody) modalBody.appendChild(flash);
+    }
   }
 
-  if (modalResultImg) {
-    if (prizeImg) {
-      modalResultImg.src = prizeImg;
-      modalResultImg.classList.remove("is-hidden");
+  function ensureResultTierBadge() {
+    if (!modalResultPanel) return null;
+
+    let badge = modalResultPanel.querySelector(".result-tier-badge");
+    if (!badge) {
+      badge = document.createElement("div");
+      badge.className = "result-tier-badge";
+      modalResultPanel.prepend(badge);
+    }
+    return badge;
+  }
+
+  function setResultTierBadge(text) {
+    const badge = ensureResultTierBadge();
+    if (!badge) return;
+    badge.textContent = text || "";
+    badge.style.display = text ? "inline-flex" : "none";
+  }
+
+  function resolveCurrentDraw() {
+    if (typeof currentDrawResolver === "function") {
+      const fn = currentDrawResolver;
+      currentDrawResolver = null;
+      fn();
+    }
+  }
+
+  function getModalFlashEl() {
+    return drawModal?.querySelector(".modal-flash") || null;
+  }
+
+  function runModalFlash(times = 1, gap = 120) {
+    const flash = getModalFlashEl();
+    if (!flash) return;
+
+    let count = 0;
+    const playOnce = () => {
+      flash.classList.remove("on");
+      void flash.offsetWidth;
+      flash.classList.add("on");
+      count += 1;
+
+      if (count < times) {
+        setTimeout(playOnce, gap);
+      }
+    };
+
+    playOnce();
+  }
+
+  function applyRewardFxLevel(level) {
+    const card = drawModal?.querySelector(".modal-card");
+    if (!card) return;
+
+    card.classList.remove("fx-ultra", "fx-super", "fx-high", "fx-mid", "fx-low");
+
+    if (level === "ultra") card.classList.add("fx-ultra");
+    else if (level === "super") card.classList.add("fx-super");
+    else if (level === "high") card.classList.add("fx-high");
+    else if (level === "mid") card.classList.add("fx-mid");
+    else card.classList.add("fx-low");
+  }
+
+  function fillResultPanel(data, options = {}) {
+    const {
+      prizeName,
+      tierText,
+      ticketNumber,
+      who,
+      prizeImg,
+      tier,
+      hasLastOne,
+    } = data;
+
+    const { withEffects = true } = options;
+
+    if (modalTitle) modalTitle.textContent = "결과 공개";
+    if (modalSub) modalSub.textContent = "";
+
+    setResultTierBadge(tierText || "");
+
+    if (modalRevealBig) {
+      modalRevealBig.textContent = prizeName || "";
+    }
+
+    if (modalRevealSmall) {
+      modalRevealSmall.innerHTML = `
+        <div class="result-meta-line">종이 ${ticketNumber}</div>
+        <div class="result-meta-line result-who">${who || "참여자"}</div>
+      `;
+    }
+
+    if (modalResultImg) {
+      if (prizeImg) {
+        modalResultImg.src = prizeImg;
+        modalResultImg.classList.remove("is-hidden");
+      } else {
+        modalResultImg.src = "";
+        modalResultImg.classList.add("is-hidden");
+      }
+    }
+
+    if (modalStagePeel) modalStagePeel.style.display = "none";
+    if (modalStageResult) modalStageResult.style.display = "block";
+
+    modalResultPanel?.classList.remove(
+      "tier-a",
+      "tier-b",
+      "tier-c",
+      "tier-d",
+      "tier-e",
+      "lastone-result",
+      "show-congrats"
+    );
+
+    if (hasLastOne) {
+      modalResultPanel?.classList.add("lastone-result", "show-congrats");
+    } else if (tier === 1) {
+      modalResultPanel?.classList.add("tier-a", "show-congrats");
+    } else if (tier === 2) {
+      modalResultPanel?.classList.add("tier-b", "show-congrats");
+    } else if (tier === 3) {
+      modalResultPanel?.classList.add("tier-c", "show-congrats");
+    } else if (tier === 4) {
+      modalResultPanel?.classList.add("tier-d", "show-congrats");
     } else {
-      modalResultImg.src = "";
-      modalResultImg.classList.add("is-hidden");
+      modalResultPanel?.classList.add("tier-e");
+    }
+
+    modalResultPanel?.classList.add("show");
+
+    const card = drawModal?.querySelector(".modal-card");
+    if (!card) return;
+
+    card.classList.remove("fx-lastone-boom");
+
+    if (!withEffects) {
+      card.classList.remove(
+        "fx-gold",
+        "fx-purple",
+        "fx-blue",
+        "fx-green",
+        "fx-flash",
+        "fx-shake",
+        "fx-ripple",
+        "fx-ultra",
+        "fx-super",
+        "fx-high",
+        "fx-mid",
+        "fx-low"
+      );
+      return;
+    }
+
+    if (hasLastOne) {
+      applyTierNeon(1);
+      applyTierSpecialFx(1);
+      applyRewardFxLevel("ultra");
+
+      card.classList.add("fx-lastone-boom");
+
+      runModalFlash(4, 120);
+
+      burstConfetti(280);
+      setTimeout(() => burstConfetti(220), 200);
+      setTimeout(() => burstConfetti(180), 400);
+
+      setTimeout(() => {
+        burstGlobalConfetti(240);
+      }, 250);
+
+      playLastOneSound();
+
+      setTimeout(() => {
+        card.classList.remove("fx-lastone-boom");
+      }, 1400);
+      return;
+    }
+
+    applyTierNeon(tier);
+
+    if (tier === 1) {
+      applyRewardFxLevel("super");
+      applyTierSpecialFx(1);
+      card.classList.add("fx-lastone-boom");
+
+      runModalFlash(4, 120);
+
+      burstConfetti(280);
+      setTimeout(() => burstConfetti(220), 200);
+      setTimeout(() => burstConfetti(180), 400);
+
+      setTimeout(() => {
+        burstGlobalConfetti(220);
+      }, 250);
+
+      playFanfare();
+
+      setTimeout(() => {
+        card.classList.remove("fx-lastone-boom");
+      }, 1400);
+    } else if (tier === 2) {
+      applyRewardFxLevel("high");
+      applyTierSpecialFx(2);
+      runModalFlash(2, 180);
+      burstConfetti(110);
+      setTimeout(() => burstConfetti(55), 240);
+      playFanfare();
+    } else if (tier === 3) {
+      applyRewardFxLevel("mid");
+      applyTierSpecialFx(3);
+      runModalFlash(1, 120);
+      burstConfetti(60);
+      playLowTierSound();
+    } else if (tier === 4) {
+      applyRewardFxLevel("low");
+      runModalFlash(1, 120);
+      burstConfetti(28);
+      playLowTierSound();
+    } else if (tier === 5) {
+      applyRewardFxLevel("low");
+      runModalFlash(1, 120);
+      playLowTierSound();
+    } else {
+      applyRewardFxLevel("low");
     }
   }
 
-  if (modalStagePeel) modalStagePeel.style.display = "none";
-  if (modalStageResult) modalStageResult.style.display = "block";
+  function openWinLogResult(log) {
+    if (!log) return;
 
-  modalResultPanel?.classList.remove(
-    "tier-a",
-    "tier-b",
-    "tier-c",
-    "tier-d",
-    "tier-e",
-    "lastone-result",
-    "show-congrats"
-  );
+    openModal();
 
-  if (hasLastOne) {
-    modalResultPanel?.classList.add("lastone-result", "show-congrats");
-  } else if (tier === 1) {
-    modalResultPanel?.classList.add("tier-a", "show-congrats");
-  } else if (tier === 2) {
-    modalResultPanel?.classList.add("tier-b", "show-congrats");
-  } else if (tier === 3) {
-    modalResultPanel?.classList.add("tier-c", "show-congrats");
-  } else if (tier === 4) {
-    modalResultPanel?.classList.add("tier-d", "show-congrats");
-  } else {
-    modalResultPanel?.classList.add("tier-e");
+    fillResultPanel(
+      {
+        prizeName: log.displayPrizeName || log.prizeName || "",
+        tierText: log.displayTierText || log.prizeId || "",
+        ticketNumber: log.ticketNumber,
+        who: log.who,
+        prizeImg: log.prizeImg || "",
+        tier: log.tier || 5,
+        hasLastOne: !!log.hasLastOne,
+      },
+      { withEffects: false }
+    );
   }
 
-  modalResultPanel?.classList.add("show");
+  function resetBoardOnly() {
+    if (!confirm("현재 쿠지판의 뽑기 진행 상황만 초기화할까요?\n상품 목록은 유지됩니다.")) return;
 
-  const card = drawModal?.querySelector(".modal-card");
-  if (!card) return;
+    pushHistory();
 
-  card.classList.remove("fx-lastone-boom");
+    state.used = {};
+    state.selectedNumbers = [];
+    state.logs = [];
+    state.queue = [];
+    state.history = [];
 
-  if (!withEffects) {
-    card.classList.remove("fx-gold", "fx-purple", "fx-blue", "fx-green", "fx-flash", "fx-shake", "fx-ripple");
-    return;
-  }
+    state.prizes.forEach((p) => {
+      if (p.id !== "OJI") {
+        p.stock = p.total;
+      }
+    });
 
-     if (hasLastOne) {
-    applyTierNeon(1);
-    applyTierSpecialFx(1);
-    applyRewardFxLevel("ultra");
-
-    card.classList.add("fx-lastone-boom");
-
-    runModalFlash(4, 120);
-
-    burstConfetti(280);
-    setTimeout(() => burstConfetti(220), 200);
-    setTimeout(() => burstConfetti(180), 400);
-
-    setTimeout(() => {
-      burstGlobalConfetti(240);
-    }, 250);
-
-    playLastOneSound();
-
-    setTimeout(() => {
-      card.classList.remove("fx-lastone-boom");
-    }, 1400);
-    return;
-  }
-
-  applyTierNeon(tier);
-
-  if (tier === 1) {
-    applyRewardFxLevel("super");
-    applyTierSpecialFx(1);
-    card.classList.add("fx-lastone-boom");
-
-    runModalFlash(4, 120);
-
-    burstConfetti(280);
-    setTimeout(() => burstConfetti(220), 200);
-    setTimeout(() => burstConfetti(180), 400);
-
-    setTimeout(() => {
-      burstGlobalConfetti(220);
-    }, 250);
-
-    playFanfare();
-
-    setTimeout(() => {
-      card.classList.remove("fx-lastone-boom");
-    }, 1400);
-  } else if (tier === 2) {
-    applyRewardFxLevel("high");
-    applyTierSpecialFx(2);
-    runModalFlash(2, 180);
-    burstConfetti(110);
-    setTimeout(() => burstConfetti(55), 240);
-    playFanfare();
-  } else if (tier === 3) {
-  applyRewardFxLevel("mid");
-  applyTierSpecialFx(3);
-  runModalFlash(1, 120);
-  burstConfetti(60);
-  playLowTierSound();
-} else if (tier === 4) {
-  applyRewardFxLevel("low");
-  runModalFlash(1, 120);
-  burstConfetti(28);
-  playLowTierSound();
-  } else if (tier === 5) {
-  applyRewardFxLevel("low");
-  runModalFlash(1, 120);
-  playLowTierSound();
-} else {
-  applyRewardFxLevel("low");
-}
-}
-
-function openWinLogResult(log) {
-  if (!log) return;
-
-  openModal();
-
-  fillResultPanel(
-    {
-      prizeName: log.displayPrizeName || log.prizeName || "",
-      tierText: log.displayTierText || log.prizeId || "",
-      ticketNumber: log.ticketNumber,
-      who: log.who,
-      prizeImg: log.prizeImg || "",
-      tier: log.tier || 5,
-      hasLastOne: !!log.hasLastOne,
-    },
-    { withEffects: false }
-  );
-}
-
-function resetBoardOnly() {
-  if (!confirm("현재 쿠지판의 뽑기 진행 상황만 초기화할까요?\n상품 목록은 유지됩니다.")) return;
-
-  pushHistory();
-
-  state.used = {};
-  state.selectedNumbers = [];
-  state.logs = [];
-  state.queue = [];
-  state.history = [];
-
-  state.prizes.forEach((p) => {
-    if (p.id !== "OJI") {
-      p.stock = p.total;
+    if (state.settings.lastOnePrize) {
+      state.settings.lastOnePrize.claimed = false;
     }
-  });
 
-  if (state.settings.lastOnePrize) {
-    state.settings.lastOnePrize.claimed = false;
+    rebuildAssignments();
+    buildBoard(state.settings.totalTickets);
+    renderAll();
+    saveStore();
+
+    alert("쿠지판 진행 상황이 초기화되었습니다.");
   }
 
-  rebuildAssignments();
-  buildBoard(state.settings.totalTickets);
-  renderAll();
-  saveStore();
+  function injectBoardResetButton() {
+    const manageTitleEls = [...document.querySelectorAll(".admin-section-title")];
+    const manageTitle = manageTitleEls.find((el) => el.textContent.trim() === "관리");
+    const manageSection = manageTitle?.closest(".admin-section");
+    const grid = manageSection?.querySelector(".admin-action-grid");
+    if (!grid) return;
 
-  alert("쿠지판 진행 상황이 초기화되었습니다.");
-}
+    if ($("#btnResetBoardOnly")) return;
 
-function injectBoardResetButton() {
-  const manageTitleEls = [...document.querySelectorAll(".admin-section-title")];
-  const manageTitle = manageTitleEls.find((el) => el.textContent.trim() === "관리");
-  const manageSection = manageTitle?.closest(".admin-section");
-  const grid = manageSection?.querySelector(".admin-action-grid");
-  if (!grid) return;
+    const btn = document.createElement("button");
+    btn.type = "button";
+    btn.id = "btnResetBoardOnly";
+    btn.className = "btn danger";
+    btn.textContent = "쿠지판 초기화";
+    btn.addEventListener("click", resetBoardOnly);
 
-  if ($("#btnResetBoardOnly")) return;
-
-  const btn = document.createElement("button");
-  btn.type = "button";
-  btn.id = "btnResetBoardOnly";
-  btn.className = "btn danger";
-  btn.textContent = "쿠지판 초기화";
-  btn.addEventListener("click", resetBoardOnly);
-
-  grid.appendChild(btn);
-}
-
-  let peelDragging = false;
-  let peelStartX = 0;
-  let peelCurrentX = 0;
-  let peelDone = false;
-  let pendingRevealData = null;
-  let currentDrawResolver = null;
-let extraUiInjected = false;
+    grid.appendChild(btn);
+  }
 
   function bindPeelEvents() {
     if (!modalPaper) return;
@@ -1648,45 +1684,28 @@ let extraUiInjected = false;
     });
   }
 
-
-  function closeDrawModal(){
-
-  stopPeelSound();   // ← 추가
-
-  drawModal?.classList.remove("show");
-}
-
-function stopPeelSound() {
-  if (!peelSound) return;
-
-  try {
-    peelSound.pause();
-    peelSound.currentTime = 0;
-  } catch {}
-}
-
   function resetDrawModalState() {
     stopPeelSound();
-    
+
     const card = drawModal?.querySelector(".modal-card");
     if (card) {
-        card.classList.remove(
-  "peel",
-  "reveal-text-on",
-  "fx-gold",
-  "fx-purple",
-  "fx-blue",
-  "fx-green",
-  "fx-flash",
-  "fx-shake",
-  "fx-ripple",
-  "fx-lastone-boom",
-  "fx-ultra",
-  "fx-super",
-  "fx-high",
-  "fx-mid",
-  "fx-low"
-);
+      card.classList.remove(
+        "peel",
+        "reveal-text-on",
+        "fx-gold",
+        "fx-purple",
+        "fx-blue",
+        "fx-green",
+        "fx-flash",
+        "fx-shake",
+        "fx-ripple",
+        "fx-lastone-boom",
+        "fx-ultra",
+        "fx-super",
+        "fx-high",
+        "fx-mid",
+        "fx-low"
+      );
     }
 
     if (modalStagePeel) modalStagePeel.style.display = "block";
@@ -1725,22 +1744,21 @@ function stopPeelSound() {
     peelDone = false;
     pendingRevealData = null;
 
-        const flash = getModalFlashEl();
-if (flash) {
-  flash.classList.remove("on");
-}
+    const flash = getModalFlashEl();
+    if (flash) {
+      flash.classList.remove("on");
+    }
 
-const globalConfetti = document.getElementById("globalConfetti");
-if (globalConfetti) {
-  globalConfetti.innerHTML = "";
-}
-    
+    const globalConfetti = document.getElementById("globalConfetti");
+    if (globalConfetti) {
+      globalConfetti.innerHTML = "";
+    }
   }
 
   function showResultPanel() {
-  if (!pendingRevealData) return;
-  fillResultPanel(pendingRevealData, { withEffects: true });
-}
+    if (!pendingRevealData) return;
+    fillResultPanel(pendingRevealData, { withEffects: true });
+  }
 
   function openModal() {
     if (!drawModal) return;
@@ -1751,33 +1769,33 @@ if (globalConfetti) {
   }
 
   function finishPeelReveal() {
-  if (peelDone) return;
-  peelDone = true;
+    if (peelDone) return;
+    peelDone = true;
 
-  stopPeelSound(); // 결과창 넘어가기 전에 바로 종료
+    stopPeelSound();
 
-  if (modalPaper) {
-    modalPaper.style.transform = "translateX(110%)";
-    modalPaper.classList.remove("dragging");
+    if (modalPaper) {
+      modalPaper.style.transform = "translateX(110%)";
+      modalPaper.classList.remove("dragging");
+    }
+
+    setTimeout(() => {
+      if (modalPaper) modalPaper.style.display = "none";
+      showResultPanel();
+    }, 180);
   }
 
-  setTimeout(() => {
-    if (modalPaper) modalPaper.style.display = "none";
-    showResultPanel();
-  }, 180);
-}
+  function closeModal() {
+    if (!drawModal) return;
 
- function closeModal() {
-  if (!drawModal) return;
+    stopPeelSound();
 
-  stopPeelSound();
-
-  resetDrawModalState();
-  drawModal.classList.remove("show");
-  drawModal.style.display = "none";
-  drawModal.setAttribute("aria-hidden", "true");
-  resolveCurrentDraw();
-}
+    resetDrawModalState();
+    drawModal.classList.remove("show");
+    drawModal.style.display = "none";
+    drawModal.setAttribute("aria-hidden", "true");
+    resolveCurrentDraw();
+  }
 
   function applyTierNeon(tier) {
     const card = drawModal?.querySelector(".modal-card");
@@ -1849,208 +1867,112 @@ if (globalConfetti) {
     peelCurrentX = 0;
     peelDone = false;
 
-      pendingRevealData = {
-    prizeName,
-    tierText: prizeLabel,
-    ticketNumber,
-    who,
-    prizeImg,
-    tier,
-    hasLastOne,
-  };
+    pendingRevealData = {
+      prizeName,
+      tierText: prizeLabel,
+      ticketNumber,
+      who,
+      prizeImg,
+      tier,
+      hasLastOne,
+    };
   }
-
-  function playFanfare() {
-  if (!CONFIG.useFanfare || !fanfare) return;
-  try {
-    stopAllRewardSounds();
-    fanfare.currentTime = 0;
-    fanfare.play().catch(() => {});
-  } catch {}
-}
-
-function playLastOneSound() {
-  if (!lastOneSound) return;
-  try {
-    stopAllRewardSounds();
-    lastOneSound.currentTime = 0;
-    lastOneSound.play().catch(() => {});
-  } catch {}
-}
-
-  function playPeelSound() {
-  if (!peelSound) return;
-
-  try {
-    stopPeelSound();
-    peelSound.currentTime = 0;
-    peelSound.play().catch(() => {});
-  } catch {}
-}
 
   function burstConfetti(count = 44) {
-  if (!modalConfetti) return;
-  modalConfetti.innerHTML = "";
+    if (!modalConfetti) return;
+    modalConfetti.innerHTML = "";
 
-  const colors = [
-    "rgba(255,215,0,.95)",
-    "rgba(177,76,255,.95)",
-    "rgba(61,168,255,.95)",
-    "rgba(255,255,255,.88)",
-    "rgba(0,255,136,.92)",
-    "rgba(255,120,210,.95)",
-  ];
+    const colors = [
+      "rgba(255,215,0,.95)",
+      "rgba(177,76,255,.95)",
+      "rgba(61,168,255,.95)",
+      "rgba(255,255,255,.88)",
+      "rgba(0,255,136,.92)",
+      "rgba(255,120,210,.95)",
+    ];
 
-  const width = modalConfetti.clientWidth || 720;
-  const height = modalConfetti.clientHeight || 420;
+    const width = modalConfetti.clientWidth || 720;
+    const height = modalConfetti.clientHeight || 420;
 
-  for (let i = 0; i < count; i++) {
-    const c = document.createElement("div");
-    c.className = "confetti";
+    for (let i = 0; i < count; i++) {
+      const c = document.createElement("div");
+      c.className = "confetti";
 
-    const fromTop = Math.random() < 0.7;
-    const startX = Math.random() * width;
-    const startY = fromTop ? -20 - Math.random() * 80 : Math.random() * (height * 0.25);
+      const fromTop = Math.random() < 0.7;
+      const startX = Math.random() * width;
+      const startY = fromTop ? -20 - Math.random() * 80 : Math.random() * (height * 0.25);
 
-    c.style.left = `${startX}px`;
-    c.style.top = `${startY}px`;
-    c.style.background = colors[Math.floor(Math.random() * colors.length)];
-    c.style.width = `${8 + Math.random() * 8}px`;
-    c.style.height = `${10 + Math.random() * 12}px`;
-    c.style.borderRadius = `${1 + Math.random() * 4}px`;
-    c.style.animationDuration = `${900 + Math.random() * 900}ms`;
-    c.style.transform = `translateY(0) rotate(${Math.random() * 120}deg)`;
+      c.style.left = `${startX}px`;
+      c.style.top = `${startY}px`;
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.width = `${8 + Math.random() * 8}px`;
+      c.style.height = `${10 + Math.random() * 12}px`;
+      c.style.borderRadius = `${1 + Math.random() * 4}px`;
+      c.style.animationDuration = `${900 + Math.random() * 900}ms`;
+      c.style.transform = `translateY(0) rotate(${Math.random() * 120}deg)`;
 
-    const driftX = (Math.random() - 0.5) * 260;
-    const fallY = height + 120 + Math.random() * 140;
-    const rotate = 480 + Math.random() * 540;
+      const driftX = (Math.random() - 0.5) * 260;
+      const fallY = height + 120 + Math.random() * 140;
+      const rotate = 480 + Math.random() * 540;
 
-    c.animate(
-      [
+      c.animate(
+        [
+          {
+            transform: `translate(0px, 0px) rotate(0deg) scale(1)`,
+            opacity: 1,
+          },
+          {
+            transform: `translate(${driftX}px, ${fallY}px) rotate(${rotate}deg) scale(.92)`,
+            opacity: 0,
+          },
+        ],
         {
-          transform: `translate(0px, 0px) rotate(0deg) scale(1)`,
-          opacity: 1,
-        },
-        {
-          transform: `translate(${driftX}px, ${fallY}px) rotate(${rotate}deg) scale(.92)`,
-          opacity: 0,
-        },
-      ],
-      {
-        duration: 900 + Math.random() * 900,
-        easing: "cubic-bezier(.18,.7,.2,1)",
-        fill: "forwards",
-      }
-    );
+          duration: 900 + Math.random() * 900,
+          easing: "cubic-bezier(.18,.7,.2,1)",
+          fill: "forwards",
+        }
+      );
 
-    modalConfetti.appendChild(c);
+      modalConfetti.appendChild(c);
+    }
+
+    setTimeout(() => {
+      if (modalConfetti) modalConfetti.innerHTML = "";
+    }, 2400);
   }
 
-  setTimeout(() => {
-    if (modalConfetti) modalConfetti.innerHTML = "";
-  }, 2400);
-}
+  function burstGlobalConfetti(amount = 160) {
+    const container = document.getElementById("globalConfetti");
+    if (!container) return;
 
-function burstGlobalConfetti(amount = 160) {
-  const container = document.getElementById("globalConfetti");
-  if (!container) return;
-
-  container.innerHTML = "";
-
-  const colors = [
-    "#ffd700",
-    "#ff7edb",
-    "#7ecbff",
-    "#ffffff",
-    "#7effc1",
-    "#ff9c6a"
-  ];
-
-  for (let i = 0; i < amount; i++) {
-    const c = document.createElement("div");
-    c.className = "global-confetti";
-
-    c.style.left = Math.random() * 100 + "vw";
-    c.style.background = colors[Math.floor(Math.random() * colors.length)];
-    c.style.animationDuration = (4 + Math.random() * 4) + "s";
-    c.style.animationDelay = (Math.random() * 1.5) + "s";
-    c.style.transform = `rotate(${Math.random() * 360}deg)`;
-
-    container.appendChild(c);
-  }
-
-  setTimeout(() => {
     container.innerHTML = "";
-  }, 9000);
-}
 
-  function getModalFlashEl() {
-  return drawModal?.querySelector(".modal-flash") || null;
-}
+    const colors = [
+      "#ffd700",
+      "#ff7edb",
+      "#7ecbff",
+      "#ffffff",
+      "#7effc1",
+      "#ff9c6a",
+    ];
 
-function runModalFlash(times = 1, gap = 120) {
-  const flash = getModalFlashEl();
-  if (!flash) return;
+    for (let i = 0; i < amount; i++) {
+      const c = document.createElement("div");
+      c.className = "global-confetti";
 
-  let count = 0;
-  const playOnce = () => {
-    flash.classList.remove("on");
-    void flash.offsetWidth;
-    flash.classList.add("on");
-    count += 1;
+      c.style.left = Math.random() * 100 + "vw";
+      c.style.background = colors[Math.floor(Math.random() * colors.length)];
+      c.style.animationDuration = `${4 + Math.random() * 4}s`;
+      c.style.animationDelay = `${Math.random() * 1.5}s`;
+      c.style.transform = `rotate(${Math.random() * 360}deg)`;
 
-    if (count < times) {
-      setTimeout(playOnce, gap);
+      container.appendChild(c);
     }
-  };
 
-  playOnce();
-}
-
-function applyRewardFxLevel(level) {
-  const card = drawModal?.querySelector(".modal-card");
-  if (!card) return;
-
-  card.classList.remove("fx-ultra", "fx-super", "fx-high", "fx-mid", "fx-low");
-
-  if (level === "ultra") card.classList.add("fx-ultra");
-  else if (level === "super") card.classList.add("fx-super");
-  else if (level === "high") card.classList.add("fx-high");
-  else if (level === "mid") card.classList.add("fx-mid");
-  else card.classList.add("fx-low");
-}
-
-function runModalFlash(times = 1, gap = 120) {
-  const flash = getModalFlashEl();
-  if (!flash) return;
-
-  let count = 0;
-  const playOnce = () => {
-    flash.classList.remove("on");
-    void flash.offsetWidth;
-    flash.classList.add("on");
-    count += 1;
-
-    if (count < times) {
-      setTimeout(playOnce, gap);
-    }
-  };
-
-  playOnce();
-}
-
-function applyRewardFxLevel(level) {
-  const card = drawModal?.querySelector(".modal-card");
-  if (!card) return;
-
-  card.classList.remove("fx-ultra", "fx-super", "fx-high", "fx-mid", "fx-low");
-
-  if (level === "ultra") card.classList.add("fx-ultra");
-  else if (level === "super") card.classList.add("fx-super");
-  else if (level === "high") card.classList.add("fx-high");
-  else if (level === "mid") card.classList.add("fx-mid");
-  else card.classList.add("fx-low");
-}
+    setTimeout(() => {
+      container.innerHTML = "";
+    }, 9000);
+  }
 
   function resolveDrawerName() {
     const manualName = (drawNicknameInput?.value || "").trim();
@@ -2063,125 +1985,129 @@ function applyRewardFxLevel(level) {
   }
 
   async function startDraw(ticketNumber) {
-  return new Promise((resolve) => {
-    try {
-      const nKey = String(ticketNumber);
-      if (state.used[nKey]) {
-        resolve();
-        return;
+    const beforeSnap = JSON.stringify(exportState());
+
+    return new Promise((resolve) => {
+      try {
+        const nKey = String(ticketNumber);
+        if (state.used[nKey]) {
+          resolve();
+          return;
+        }
+
+        currentDrawResolver = resolve;
+
+        const resultNumber = Number(state.ticketResults[nKey]);
+        if (!Number.isFinite(resultNumber)) {
+          alert("결과 번호가 없습니다.");
+          resolveCurrentDraw();
+          return;
+        }
+
+        const prize = findPrizeByResultNumber(resultNumber);
+        pushHistory();
+
+        const openedBefore = Object.keys(state.used).length;
+        const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
+
+        const lastOnePrize =
+          isLastDraw &&
+          state.settings.lastOnePrize &&
+          !state.settings.lastOnePrize.claimed
+            ? state.settings.lastOnePrize
+            : null;
+
+        if (prize.id !== "OJI") {
+          prize.stock = Math.max(0, prize.stock - 1);
+        }
+
+        if (lastOnePrize) {
+          lastOnePrize.claimed = true;
+        }
+
+        state.used[nKey] = true;
+        state.selectedNumbers = state.selectedNumbers.filter((x) => x !== ticketNumber);
+
+        const drawerInfo = resolveDrawerName();
+        const who = drawerInfo.who;
+
+        const displayPrizeName = lastOnePrize
+          ? `${prize.name} + ${lastOnePrize.name}`
+          : `${prize.name}`;
+
+        const displayTierText = lastOnePrize
+          ? `${prize.label} + LAST ONE`
+          : prize.label;
+
+        const displayImg = lastOnePrize
+          ? (lastOnePrize.img || prize.img || "")
+          : (prize.img || "");
+
+        const log = {
+          ticketNumber,
+          resultNumber,
+          who,
+          prizeId: displayTierText,
+          prizeName: displayPrizeName,
+          displayPrizeName,
+          displayTierText,
+          prizeImg: displayImg,
+          hasLastOne: !!lastOnePrize,
+          tier: lastOnePrize ? 1 : prize.tier,
+          time: new Date().toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }),
+          ts: Date.now(),
+        };
+
+        state.logs.push(log);
+
+        if (drawerInfo.fromQueue) {
+          state.queue.shift();
+        }
+
+        renderAll();
+        saveStore();
+
+        openModal();
+
+        if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
+        if (modalSub) modalSub.textContent = `결과 번호 ${resultNumber}`;
+
+        runModalPeelReveal({
+          resultNumber,
+          prizeName: displayPrizeName,
+          prizeLabel: displayTierText,
+          ticketNumber,
+          who,
+          prizeImg: displayImg,
+          tier: lastOnePrize ? 1 : prize.tier,
+          hasLastOne: !!lastOnePrize,
+        });
+      } catch (e) {
+        console.error("[KUJI] startDraw error:", e);
+
+        try {
+          importState(JSON.parse(beforeSnap));
+          buildBoard(state.settings.totalTickets);
+          renderAll();
+          saveStore();
+        } catch (rollbackError) {
+          console.error("[KUJI] rollback error:", rollbackError);
+        }
+
+        if (drawModal?.classList.contains("show")) {
+          closeModal();
+        } else {
+          resolveCurrentDraw();
+        }
+
+        alert("오류가 발생했습니다. 콘솔을 확인하세요.");
       }
-
-      currentDrawResolver = resolve;
-
-      openModal();
-
-      if (modalTitle) modalTitle.textContent = "번호 공개";
-      if (modalSub) modalSub.textContent = "종이를 끝까지 밀어서 숫자를 확인하세요.";
-
-      if (modalResultNumber) modalResultNumber.textContent = "";
-      if (modalRevealBig) modalRevealBig.textContent = "";
-      if (modalRevealSmall) modalRevealSmall.innerHTML = "";
-
-      if (modalResultImg) {
-        modalResultImg.src = "";
-        modalResultImg.classList.add("is-hidden");
-      }
-
-      const resultNumber = Number(state.ticketResults[nKey]);
-      if (!Number.isFinite(resultNumber)) {
-        if (modalTitle) modalTitle.textContent = "오류";
-        if (modalSub) modalSub.textContent = "결과 번호가 없습니다.";
-        resolveCurrentDraw();
-        return;
-      }
-
-      const prize = findPrizeByResultNumber(resultNumber);
-      pushHistory();
-
-      const openedBefore = Object.keys(state.used).length;
-      const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
-
-      const lastOnePrize =
-        isLastDraw &&
-        state.settings.lastOnePrize &&
-        !state.settings.lastOnePrize.claimed
-          ? state.settings.lastOnePrize
-          : null;
-
-      if (prize.id !== "OJI") {
-        prize.stock = Math.max(0, prize.stock - 1);
-      }
-
-      if (lastOnePrize) {
-        lastOnePrize.claimed = true;
-      }
-
-      state.used[nKey] = true;
-      state.selectedNumbers = state.selectedNumbers.filter((x) => x !== ticketNumber);
-
-      const drawerInfo = resolveDrawerName();
-      const who = drawerInfo.who;
-
-      const displayPrizeName = lastOnePrize
-        ? `${prize.name} + ${lastOnePrize.name}`
-        : `${prize.name}`;
-
-      const displayTierText = lastOnePrize
-        ? `${prize.label} + LAST ONE`
-        : prize.label;
-
-      const displayImg = lastOnePrize
-        ? (lastOnePrize.img || prize.img || "")
-        : (prize.img || "");
-
-      const log = {
-        ticketNumber,
-        resultNumber,
-        who,
-        prizeId: displayTierText,
-        prizeName: displayPrizeName,
-        displayPrizeName,
-        displayTierText,
-        prizeImg: displayImg,
-        hasLastOne: !!lastOnePrize,
-        tier: lastOnePrize ? 1 : prize.tier,
-        time: new Date().toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
-        ts: Date.now(),
-      };
-
-      state.logs.push(log);
-
-      if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
-      if (modalSub) modalSub.textContent = `결과 번호 ${resultNumber}`;
-
-      runModalPeelReveal({
-        resultNumber,
-        prizeName: displayPrizeName,
-        prizeLabel: displayTierText,
-        ticketNumber,
-        who,
-        prizeImg: displayImg,
-        tier: lastOnePrize ? 1 : prize.tier,
-        hasLastOne: !!lastOnePrize,
-      });
-
-      if (drawerInfo.fromQueue) {
-        shiftQueue();
-      }
-
-      renderAll();
-      saveStore();
-    } catch (e) {
-      console.error("[KUJI] startDraw error:", e);
-      alert("오류가 발생했습니다. 콘솔을 확인하세요.");
-      resolveCurrentDraw();
-    }
-  });
-}
+    });
+  }
 
   function rebuildAssignmentsIfNeeded() {
     const total = state.settings.totalTickets;
@@ -2246,45 +2172,42 @@ function applyRewardFxLevel(level) {
     saveStore();
   });
 
-  const btnApplyBasicSettings = $("#btnApplyBasicSettings");
+  btnApplyBasicSettings?.addEventListener("click", () => {
+    const title = (kujiTitleInput?.value || "").trim();
+    const price = (priceInput?.value || "").trim();
+    const total = Number(totalTicketsInput?.value);
 
-btnApplyBasicSettings?.addEventListener("click", () => {
+    if (!title) {
+      alert("쿠지판 이름을 입력하세요.");
+      return;
+    }
 
-  const title = (kujiTitleInput?.value || "").trim();
-  const price = (priceInput?.value || "").trim();
-  const total = Number(totalTicketsInput?.value);
+    if (!price) {
+      alert("1회 가격을 입력하세요.");
+      return;
+    }
 
-  if (!title) {
-    alert("쿠지판 이름을 입력하세요.");
-    return;
-  }
+    if (!Number.isFinite(total) || total < 1 || total > 500) {
+      alert("전체 뽑기 수는 1~500 사이로 입력하세요.");
+      return;
+    }
 
-  if (!price) {
-    alert("1회 가격을 입력하세요.");
-    return;
-  }
+    pushHistory();
 
-  if (!Number.isFinite(total) || total < 1 || total > 500) {
-    alert("전체 뽑기 수는 1~500 사이로 입력하세요.");
-    return;
-  }
+    state.settings.kujiTitle = title;
+    state.settings.priceText = price;
 
-  pushHistory();
+    if (state.settings.totalTickets !== Math.floor(total)) {
+      state.settings.totalTickets = Math.floor(total);
+      rebuildAssignments();
+      buildBoard(state.settings.totalTickets);
+    }
 
-  state.settings.kujiTitle = title;
-  state.settings.priceText = price;
+    renderAll();
+    saveStore();
 
-  if (state.settings.totalTickets !== total) {
-    state.settings.totalTickets = Math.floor(total);
-    rebuildAssignments();
-    buildBoard(state.settings.totalTickets);
-  }
-
-  renderAll();
-  saveStore();
-
-  alert("기본 설정이 적용되었습니다.");
-});
+    alert("기본 설정이 적용되었습니다.");
+  });
 
   btnAddPrize?.addEventListener("click", async () => {
     const name = (prizeNameInput?.value || "").trim();
@@ -2525,35 +2448,35 @@ btnApplyBasicSettings?.addEventListener("click", () => {
       }
     }
   });
-  
+
   btnToggleSound?.addEventListener("click", () => {
-  state.settings.soundMuted = !state.settings.soundMuted;
-  applySoundSettings();
-  saveStore();
-});
+    state.settings.soundMuted = !state.settings.soundMuted;
+    applySoundSettings();
+    saveStore();
+  });
 
-soundVolumeRange?.addEventListener("input", () => {
-  const nextVolume = Number(soundVolumeRange.value) / 100;
-  state.settings.soundVolume = Math.max(0, Math.min(1, nextVolume));
+  soundVolumeRange?.addEventListener("input", () => {
+    const nextVolume = Number(soundVolumeRange.value) / 100;
+    state.settings.soundVolume = Math.max(0, Math.min(1, nextVolume));
 
-  if (state.settings.soundVolume > 0 && state.settings.soundMuted) {
-    state.settings.soundMuted = false;
-  }
+    if (state.settings.soundVolume > 0 && state.settings.soundMuted) {
+      state.settings.soundMuted = false;
+    }
 
-  applySoundSettings();
-  saveStore();
-});
+    applySoundSettings();
+    saveStore();
+  });
 
   loadStore();
-rebuildAssignmentsIfNeeded();
-rebuildBoardSelect();
-applyBoardVisual();
-injectExtraUi();
-injectBoardResetButton();
-setMode(state.mode || "broadcast");
-buildBoard(state.settings.totalTickets);
-renderAll();
-bindPeelEvents();
+  rebuildAssignmentsIfNeeded();
+  rebuildBoardSelect();
+  applyBoardVisual();
+  injectExtraUi();
+  injectBoardResetButton();
+  setMode(state.mode || "broadcast");
+  buildBoard(state.settings.totalTickets);
+  renderAll();
+  bindPeelEvents();
 
   window.__KUJI__ = { state, store, rebuildAssignments, startDraw };
 })();
