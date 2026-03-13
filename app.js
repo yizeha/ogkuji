@@ -5,12 +5,12 @@
   const CONFIG = {
     defaultTotalTickets: 30,
     flashyTierMax: 3,
-    defaultPaperImage: "./assets/paper.png",
-    defaultCoverPaperImage: "./assets/paper.png",
-    defaultEmptyResultImage: "./assets/empty.png",
-    defaultBgImage: "./assets/bg.png",
-    defaultBoardLogo: "./assets/logo_board.png",
-    defaultTopLogo: "./assets/logo_top.png",
+    defaultPaperImage: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/paper.png",
+    defaultCoverPaperImage: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/paper.png",
+    defaultEmptyResultImage: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/empty.png",
+    defaultBgImage: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/bg.png",
+    defaultBoardLogo: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/logos/logo_board.png",
+    defaultTopLogo: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/logos/logo_top.png",
     useFanfare: true,
     MASTER_KEY: "kuji_multi_board_store_v1",
     drawDelayMs: 1000,
@@ -74,20 +74,20 @@
     const onepiece = createDefaultBoard("원피스 쿠지판");
     const aot = createDefaultBoard("진격 쿠지판");
 
-    base.meta.bgImage = "./assets/bg.png";
-    base.meta.paperImage = "./assets/paper.png";
+    base.meta.bgImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/bg.png";
+    base.meta.paperImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/paper.png";
 
-    mha.meta.bgImage = "./assets/bg_mha.png";
-    mha.meta.paperImage = "./assets/paper_mha.png";
+    mha.meta.bgImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/bg_mha.png";
+    mha.meta.paperImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/paper_mha.png";
 
-    kimetsu.meta.bgImage = "./assets/bg_kimetsu.png";
-    kimetsu.meta.paperImage = "./assets/paper_kimetsu.png";
+    kimetsu.meta.bgImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/bg_kimetsu.png";
+    kimetsu.meta.paperImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/paper_kimetsu.png";
 
-    onepiece.meta.bgImage = "./assets/bg_onepiece.png";
-    onepiece.meta.paperImage = "./assets/paper_onepiece.png";
+    onepiece.meta.bgImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/bg_onepiece.png";
+    onepiece.meta.paperImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/paper_onepiece.png";
 
-    aot.meta.bgImage = "./assets/bg_aot.png";
-    aot.meta.paperImage = "./assets/paper_aot.png";
+    aot.meta.bgImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/bg_aot.png";
+    aot.meta.paperImage = "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/boards/paper_aot.png";
 
     return [base, mha, kimetsu, onepiece, aot];
   }
@@ -217,14 +217,19 @@
   const modalStageResult = $("#modalStageResult");
   const modalPaperImg = $("#modalPaperImg");
   const modalResultPanel = $("#modalResultPanel");
+  const modalFooter = drawModal?.querySelector(".modal-footer");
 
   let peelDragging = false;
-  let peelStartX = 0;
-  let peelCurrentX = 0;
-  let peelDone = false;
-  let pendingRevealData = null;
-  let currentDrawResolver = null;
-  let extraUiInjected = false;
+let peelStartX = 0;
+let peelCurrentX = 0;
+let peelDone = false;
+let pendingRevealData = null;
+let pendingDrawCommit = null;
+let pendingDrawCommitted = false;
+let currentDrawResolver = null;
+let extraUiInjected = false;
+let currentViewingLogTs = null;
+let btnEditWinnerName = null;
 
   if (modalResultImg) {
     modalResultImg.onerror = () => {
@@ -1022,6 +1027,139 @@
       });
   }
 
+  function findManualTicketForPrize(prize) {
+    if (!prize || prize.id === "OJI") return null;
+
+    const remainPrizeNumbers = (prize.numbers || []).filter((num) => {
+      const usedTicket = Object.keys(state.used).find((ticketNo) => {
+        if (!state.used[ticketNo]) return false;
+        return Number(state.ticketResults[ticketNo]) === Number(num);
+      });
+      return !usedTicket;
+    });
+
+    for (const resultNumber of remainPrizeNumbers) {
+      const ticketNumber = Object.keys(state.ticketResults).find((ticketNo) => {
+        return !state.used[ticketNo] && Number(state.ticketResults[ticketNo]) === Number(resultNumber);
+      });
+
+      if (ticketNumber) {
+        return {
+          ticketNumber: Number(ticketNumber),
+          resultNumber: Number(resultNumber),
+        };
+      }
+    }
+
+    return null;
+  }
+
+  function manualAwardPrize(prizeId) {
+    const prize = state.prizes.find((p) => p.id === prizeId);
+    if (!prize || prize.id === "OJI") {
+      alert("수동당첨 대상 상품이 아닙니다.");
+      return;
+    }
+
+    if (prize.stock <= 0) {
+      alert("이 상품은 이미 수량이 없습니다.");
+      return;
+    }
+
+    const nickname = prompt(`${prize.label} ${prize.name}\n수동 당첨 닉네임을 입력해주이소.`, "");
+    if (nickname === null) return;
+
+    const who = String(nickname || "").trim();
+    if (!who) {
+      alert("닉네임을 입력해야 합니더.");
+      return;
+    }
+
+    const matched = findManualTicketForPrize(prize);
+    if (!matched) {
+      alert("해당 상품에 연결된 남은 티켓을 찾지 못했습니다.");
+      return;
+    }
+
+    pushHistory();
+
+    const openedBefore = Object.keys(state.used).length;
+    const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
+
+    const lastOnePrize =
+      isLastDraw &&
+      state.settings.lastOnePrize &&
+      !state.settings.lastOnePrize.claimed
+        ? state.settings.lastOnePrize
+        : null;
+
+    prize.stock = Math.max(0, prize.stock - 1);
+    state.used[String(matched.ticketNumber)] = true;
+    state.selectedNumbers = state.selectedNumbers.filter((x) => x !== matched.ticketNumber);
+
+    if (lastOnePrize) {
+      lastOnePrize.claimed = true;
+    }
+
+    const displayPrizeName = lastOnePrize
+      ? `${prize.name} + ${lastOnePrize.name}`
+      : prize.name;
+
+    const displayTierText = lastOnePrize
+      ? `${prize.label} + LAST ONE`
+      : prize.label;
+
+    const displayImg = lastOnePrize
+      ? (lastOnePrize.img || prize.img || "")
+      : (prize.img || "");
+
+    const log = {
+      ticketNumber: matched.ticketNumber,
+      resultNumber: matched.resultNumber,
+      who,
+      prizeId: displayTierText,
+      prizeName: displayPrizeName,
+      displayPrizeName,
+      displayTierText,
+      prizeImg: displayImg,
+      hasLastOne: !!lastOnePrize,
+      tier: lastOnePrize ? 1 : prize.tier,
+      time: new Date().toLocaleTimeString("ko-KR", {
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+      }),
+      ts: Date.now(),
+      isManual: true,
+    };
+
+    state.logs.push(log);
+
+    renderAll();
+    saveStore();
+
+    openModal();
+    fillResultPanel(
+      {
+        prizeName: displayPrizeName,
+        tierText: displayTierText,
+        ticketNumber: matched.ticketNumber,
+        who,
+        prizeImg: displayImg,
+        tier: lastOnePrize ? 1 : prize.tier,
+        hasLastOne: !!lastOnePrize,
+      },
+      { withEffects: true }
+    );
+
+    if (modalTitle) modalTitle.textContent = "수동 당첨 처리";
+    if (modalSub) {
+      modalSub.textContent = lastOnePrize
+        ? `관리자 수동 처리 · 결과 번호 ${matched.resultNumber} · LAST ONE 포함`
+        : `관리자 수동 처리 · 결과 번호 ${matched.resultNumber}`;
+    }
+  }
+
   function renderAdminPrizeList() {
     if (!adminPrizeList) return;
     adminPrizeList.innerHTML = "";
@@ -1065,6 +1203,10 @@
       edit.type = "button";
       edit.className = "admin-prize-edit";
 
+      const manual = document.createElement("button");
+      manual.type = "button";
+      manual.className = "admin-prize-manual";
+
       const del = document.createElement("button");
       del.type = "button";
       del.className = "admin-prize-delete";
@@ -1075,6 +1217,11 @@
         edit.style.opacity = ".5";
         edit.style.cursor = "default";
 
+        manual.textContent = "기본";
+        manual.disabled = true;
+        manual.style.opacity = ".5";
+        manual.style.cursor = "default";
+
         del.textContent = "기본";
         del.disabled = true;
         del.style.opacity = ".5";
@@ -1083,6 +1230,11 @@
         edit.textContent = "수정";
         edit.addEventListener("click", () => {
           openPrizeEditSection(p.id);
+        });
+
+        manual.textContent = "수동당첨";
+        manual.addEventListener("click", () => {
+          manualAwardPrize(p.id);
         });
 
         del.textContent = "삭제";
@@ -1102,6 +1254,7 @@
       }
 
       actions.appendChild(edit);
+      actions.appendChild(manual);
       actions.appendChild(del);
 
       item.appendChild(thumb);
@@ -1154,7 +1307,7 @@
 
       const meta = document.createElement("div");
       meta.className = "winmeta";
-      meta.textContent = `종이 ${item.ticketNumber} · 닉네임: ${item.who}`;
+      meta.textContent = `종이 ${item.ticketNumber} · 닉네임: ${item.who}${item.isManual ? " · 수동처리" : ""}`;
 
       const time = document.createElement("div");
       time.className = "wintime";
@@ -1306,6 +1459,41 @@
       .winrow:hover{
         filter: brightness(1.05);
       }
+      .admin-prize-manual{
+        border: 1px solid rgba(255,195,77,.55);
+        background: rgba(255,195,77,.12);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 900;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .admin-prize-manual:hover{
+        background: rgba(255,195,77,.22);
+      }
+      .modal-footer{
+        gap: 8px;
+      }
+      .modal-footer-left{
+        margin-right: auto;
+      }
+      .modal-winner-edit-btn{
+        border: 1px solid rgba(122,112,255,.55);
+        background: rgba(122,112,255,.14);
+        color: #fff;
+        padding: 10px 14px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 900;
+      }
+      .modal-winner-edit-btn:hover{
+        background: rgba(122,112,255,.22);
+      }
+      .modal-winner-edit-btn.is-hidden{
+        display: none;
+      }
     `;
     document.head.appendChild(style);
 
@@ -1315,6 +1503,31 @@
       const modalBody = drawModal.querySelector(".modal-body");
       if (modalBody) modalBody.appendChild(flash);
     }
+
+    if (modalFooter && !$("#btnEditWinnerName", modalFooter)) {
+      const leftWrap = document.createElement("div");
+      leftWrap.className = "modal-footer-left";
+
+      btnEditWinnerName = document.createElement("button");
+      btnEditWinnerName.type = "button";
+      btnEditWinnerName.id = "btnEditWinnerName";
+      btnEditWinnerName.className = "modal-winner-edit-btn is-hidden";
+      btnEditWinnerName.textContent = "닉네임 수정";
+
+      btnEditWinnerName.addEventListener("click", () => {
+        editCurrentViewingWinnerName();
+      });
+
+      leftWrap.appendChild(btnEditWinnerName);
+      modalFooter.prepend(leftWrap);
+    } else {
+      btnEditWinnerName = $("#btnEditWinnerName", modalFooter);
+    }
+  }
+
+  function showWinnerEditButton(show) {
+    if (!btnEditWinnerName) return;
+    btnEditWinnerName.classList.toggle("is-hidden", !show);
   }
 
   function ensureResultTierBadge() {
@@ -1343,6 +1556,34 @@
       fn();
     }
   }
+
+  function commitPendingDrawIfNeeded() {
+  if (!pendingDrawCommit || pendingDrawCommitted) return;
+
+  const tx = pendingDrawCommit;
+
+  if (tx.prize.id !== "OJI") {
+    tx.prize.stock = Math.max(0, tx.prize.stock - 1);
+  }
+
+  if (tx.lastOnePrize) {
+    tx.lastOnePrize.claimed = true;
+  }
+
+  state.used[String(tx.ticketNumber)] = true;
+  state.selectedNumbers = state.selectedNumbers.filter((x) => x !== tx.ticketNumber);
+
+  state.logs.push(tx.log);
+
+  if (tx.drawerInfo?.fromQueue) {
+    state.queue.shift();
+  }
+
+  pendingDrawCommitted = true;
+
+  renderAll();
+  saveStore();
+}
 
   function getModalFlashEl() {
     return drawModal?.querySelector(".modal-flash") || null;
@@ -1545,24 +1786,77 @@
     }
   }
 
-  function openWinLogResult(log) {
-    if (!log) return;
+  function findLogByTs(ts) {
+    return state.logs.find((log) => log.ts === ts) || null;
+  }
 
-    openModal();
+  function editCurrentViewingWinnerName() {
+    if (!currentViewingLogTs) {
+      alert("수정할 당첨 기록이 없습니다.");
+      return;
+    }
+
+    const targetLog = findLogByTs(currentViewingLogTs);
+    if (!targetLog) {
+      alert("기록을 찾지 못했습니다.");
+      return;
+    }
+
+    const nextName = prompt("새 닉네임을 입력해주이소.", targetLog.who || "");
+    if (nextName === null) return;
+
+    const trimmed = String(nextName || "").trim();
+    if (!trimmed) {
+      alert("닉네임은 비워둘 수 없습니다.");
+      return;
+    }
+
+    pushHistory();
+    targetLog.who = trimmed;
+
+    renderAll();
+    saveStore();
 
     fillResultPanel(
       {
-        prizeName: log.displayPrizeName || log.prizeName || "",
-        tierText: log.displayTierText || log.prizeId || "",
-        ticketNumber: log.ticketNumber,
-        who: log.who,
-        prizeImg: log.prizeImg || "",
-        tier: log.tier || 5,
-        hasLastOne: !!log.hasLastOne,
+        prizeName: targetLog.displayPrizeName || targetLog.prizeName || "",
+        tierText: targetLog.displayTierText || targetLog.prizeId || "",
+        ticketNumber: targetLog.ticketNumber,
+        who: targetLog.who,
+        prizeImg: targetLog.prizeImg || "",
+        tier: targetLog.tier || 5,
+        hasLastOne: !!targetLog.hasLastOne,
       },
       { withEffects: false }
     );
   }
+
+  function openWinLogResult(log) {
+  if (!log) return;
+
+  openModal();
+
+  currentViewingLogTs = log.ts;
+  showWinnerEditButton(true);
+
+  fillResultPanel(
+    {
+      prizeName: log.displayPrizeName || log.prizeName || "",
+      tierText: log.displayTierText || log.prizeId || "",
+      ticketNumber: log.ticketNumber,
+      who: log.who,
+      prizeImg: log.prizeImg || "",
+      tier: log.tier || 5,
+      hasLastOne: !!log.hasLastOne,
+    },
+    { withEffects: false }
+  );
+
+  if (modalTitle) modalTitle.textContent = "당첨 결과 보기";
+  if (modalSub) {
+    modalSub.textContent = log.isManual ? "관리자 수동 처리 기록" : "";
+  }
+}
 
   function resetBoardOnly() {
     if (!confirm("현재 쿠지판의 뽑기 진행 상황만 초기화할까요?\n상품 목록은 유지됩니다.")) return;
@@ -1743,6 +2037,10 @@
     peelCurrentX = 0;
     peelDone = false;
     pendingRevealData = null;
+pendingDrawCommit = null;
+pendingDrawCommitted = false;
+currentViewingLogTs = null;
+showWinnerEditButton(false);
 
     const flash = getModalFlashEl();
     if (flash) {
@@ -1756,9 +2054,11 @@
   }
 
   function showResultPanel() {
-    if (!pendingRevealData) return;
-    fillResultPanel(pendingRevealData, { withEffects: true });
-  }
+  if (!pendingRevealData) return;
+
+  commitPendingDrawIfNeeded();
+  fillResultPanel(pendingRevealData, { withEffects: true });
+}
 
   function openModal() {
     if (!drawModal) return;
@@ -1786,16 +2086,17 @@
   }
 
   function closeModal() {
-    if (!drawModal) return;
+  if (!drawModal) return;
 
-    stopPeelSound();
+  stopPeelSound();
 
-    resetDrawModalState();
-    drawModal.classList.remove("show");
-    drawModal.style.display = "none";
-    drawModal.setAttribute("aria-hidden", "true");
-    resolveCurrentDraw();
-  }
+  resetDrawModalState();
+  drawModal.classList.remove("show");
+  drawModal.style.display = "none";
+  drawModal.setAttribute("aria-hidden", "true");
+
+  resolveCurrentDraw();
+}
 
   function applyTierNeon(tier) {
     const card = drawModal?.querySelector(".modal-card");
@@ -1985,129 +2286,123 @@
   }
 
   async function startDraw(ticketNumber) {
-    const beforeSnap = JSON.stringify(exportState());
+  const beforeSnap = JSON.stringify(exportState());
 
-    return new Promise((resolve) => {
+  return new Promise((resolve) => {
+    try {
+      const nKey = String(ticketNumber);
+      if (state.used[nKey]) {
+        resolve();
+        return;
+      }
+
+      currentDrawResolver = resolve;
+
+      const resultNumber = Number(state.ticketResults[nKey]);
+      if (!Number.isFinite(resultNumber)) {
+        alert("결과 번호가 없습니다.");
+        resolveCurrentDraw();
+        return;
+      }
+
+      const prize = findPrizeByResultNumber(resultNumber);
+
+      const openedBefore = Object.keys(state.used).length;
+      const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
+
+      const lastOnePrize =
+        isLastDraw &&
+        state.settings.lastOnePrize &&
+        !state.settings.lastOnePrize.claimed
+          ? state.settings.lastOnePrize
+          : null;
+
+      const drawerInfo = resolveDrawerName();
+      const who = drawerInfo.who;
+
+      const displayPrizeName = lastOnePrize
+        ? `${prize.name} + ${lastOnePrize.name}`
+        : `${prize.name}`;
+
+      const displayTierText = lastOnePrize
+        ? `${prize.label} + LAST ONE`
+        : prize.label;
+
+      const displayImg = lastOnePrize
+        ? (lastOnePrize.img || prize.img || "")
+        : (prize.img || "");
+
+      const log = {
+        ticketNumber,
+        resultNumber,
+        who,
+        prizeId: displayTierText,
+        prizeName: displayPrizeName,
+        displayPrizeName,
+        displayTierText,
+        prizeImg: displayImg,
+        hasLastOne: !!lastOnePrize,
+        tier: lastOnePrize ? 1 : prize.tier,
+        time: new Date().toLocaleTimeString("ko-KR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        ts: Date.now(),
+      };
+
+      pushHistory();
+
+openModal();
+
+pendingDrawCommit = {
+  ticketNumber,
+  resultNumber,
+  prize,
+  lastOnePrize,
+  drawerInfo,
+  log,
+};
+pendingDrawCommitted = false;
+
+if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
+if (modalSub) modalSub.textContent = `결과 번호 ${resultNumber}`;
+
+runModalPeelReveal({
+  resultNumber,
+  prizeName: displayPrizeName,
+  prizeLabel: displayTierText,
+  ticketNumber,
+  who,
+  prizeImg: displayImg,
+  tier: lastOnePrize ? 1 : prize.tier,
+  hasLastOne: !!lastOnePrize,
+});
+    } catch (e) {
+      console.error("[KUJI] startDraw error:", e);
+
       try {
-        const nKey = String(ticketNumber);
-        if (state.used[nKey]) {
-          resolve();
-          return;
-        }
-
-        currentDrawResolver = resolve;
-
-        const resultNumber = Number(state.ticketResults[nKey]);
-        if (!Number.isFinite(resultNumber)) {
-          alert("결과 번호가 없습니다.");
-          resolveCurrentDraw();
-          return;
-        }
-
-        const prize = findPrizeByResultNumber(resultNumber);
-        pushHistory();
-
-        const openedBefore = Object.keys(state.used).length;
-        const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
-
-        const lastOnePrize =
-          isLastDraw &&
-          state.settings.lastOnePrize &&
-          !state.settings.lastOnePrize.claimed
-            ? state.settings.lastOnePrize
-            : null;
-
-        if (prize.id !== "OJI") {
-          prize.stock = Math.max(0, prize.stock - 1);
-        }
-
-        if (lastOnePrize) {
-          lastOnePrize.claimed = true;
-        }
-
-        state.used[nKey] = true;
-        state.selectedNumbers = state.selectedNumbers.filter((x) => x !== ticketNumber);
-
-        const drawerInfo = resolveDrawerName();
-        const who = drawerInfo.who;
-
-        const displayPrizeName = lastOnePrize
-          ? `${prize.name} + ${lastOnePrize.name}`
-          : `${prize.name}`;
-
-        const displayTierText = lastOnePrize
-          ? `${prize.label} + LAST ONE`
-          : prize.label;
-
-        const displayImg = lastOnePrize
-          ? (lastOnePrize.img || prize.img || "")
-          : (prize.img || "");
-
-        const log = {
-          ticketNumber,
-          resultNumber,
-          who,
-          prizeId: displayTierText,
-          prizeName: displayPrizeName,
-          displayPrizeName,
-          displayTierText,
-          prizeImg: displayImg,
-          hasLastOne: !!lastOnePrize,
-          tier: lastOnePrize ? 1 : prize.tier,
-          time: new Date().toLocaleTimeString("ko-KR", {
-            hour: "2-digit",
-            minute: "2-digit",
-            second: "2-digit",
-          }),
-          ts: Date.now(),
-        };
-
-        state.logs.push(log);
-
-        if (drawerInfo.fromQueue) {
-          state.queue.shift();
-        }
-
+        importState(JSON.parse(beforeSnap));
+        buildBoard(state.settings.totalTickets);
         renderAll();
         saveStore();
-
-        openModal();
-
-        if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
-        if (modalSub) modalSub.textContent = `결과 번호 ${resultNumber}`;
-
-        runModalPeelReveal({
-          resultNumber,
-          prizeName: displayPrizeName,
-          prizeLabel: displayTierText,
-          ticketNumber,
-          who,
-          prizeImg: displayImg,
-          tier: lastOnePrize ? 1 : prize.tier,
-          hasLastOne: !!lastOnePrize,
-        });
-      } catch (e) {
-        console.error("[KUJI] startDraw error:", e);
-
-        try {
-          importState(JSON.parse(beforeSnap));
-          buildBoard(state.settings.totalTickets);
-          renderAll();
-          saveStore();
-        } catch (rollbackError) {
-          console.error("[KUJI] rollback error:", rollbackError);
-        }
-
-        if (drawModal?.classList.contains("show")) {
-          closeModal();
-        } else {
-          resolveCurrentDraw();
-        }
-
-        alert("오류가 발생했습니다. 콘솔을 확인하세요.");
+      } catch (rollbackError) {
+        console.error("[KUJI] rollback error:", rollbackError);
       }
-    });
-  }
+
+      pendingDrawCommit = null;
+      pendingDrawCommitted = false;
+
+      if (drawModal?.classList.contains("show")) {
+        closeModal();
+      } else {
+        resolveCurrentDraw();
+      }
+
+      alert("오류가 발생했습니다. 콘솔을 확인하세요.");
+    }
+  });
+}
 
   function rebuildAssignmentsIfNeeded() {
     const total = state.settings.totalTickets;
@@ -2478,5 +2773,11 @@
   renderAll();
   bindPeelEvents();
 
-  window.__KUJI__ = { state, store, rebuildAssignments, startDraw };
+  window.__KUJI__ = {
+    state,
+    store,
+    rebuildAssignments,
+    startDraw,
+    manualAwardPrize,
+  };
 })();
