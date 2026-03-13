@@ -301,36 +301,45 @@
           <div class="admin-section-title">기본 설정</div>
 
           <div class="admin-col">
-            <div class="field">
-              <label for="kujiTitleInput">쿠지판 이름</label>
-              <input
-                class="input"
-                id="kujiTitleInput"
-                type="text"
-                placeholder="예: 오지상 쿠지"
-              />
-            </div>
 
-            <div class="field buttons full">
-              <button class="btn ok" id="btnApplyTitle" type="button">적용</button>
-            </div>
+  <div class="field">
+    <label for="kujiTitleInput">쿠지판 이름</label>
+    <input
+      class="input"
+      id="kujiTitleInput"
+      type="text"
+      placeholder="예: 오지상 쿠지"
+    />
+  </div>
 
-            <div class="field">
-              <label for="totalTicketsInput">전체 뽑기 수</label>
-              <input
-                class="input"
-                id="totalTicketsInput"
-                type="number"
-                min="1"
-                step="1"
-                value="30"
-              />
-            </div>
+  <div class="field">
+    <label for="priceInput">1회 가격</label>
+    <input
+      class="input"
+      id="priceInput"
+      type="text"
+      placeholder="예: 14,000원"
+    />
+  </div>
 
-            <div class="field buttons full">
-              <button class="btn ok" id="btnApplyTickets" type="button">적용</button>
-            </div>
-          </div>
+  <div class="field">
+    <label for="totalTicketsInput">전체 뽑기 수</label>
+    <input
+      class="input"
+      id="totalTicketsInput"
+      type="number"
+      min="1"
+      step="1"
+    />
+  </div>
+
+  <div class="field buttons full">
+    <button class="btn ok" id="btnApplyBasicSettings" type="button">
+      설정 적용
+    </button>
+  </div>
+
+</div>
         </div>
 
         <!-- 관리자 상품 목록 -->
@@ -467,6 +476,7 @@
     <audio id="fanfare" src="./assets/fanfare.mp3" preload="auto"></audio>
     <audio id="peelSound" src="./assets/peel.mp3" preload="auto"></audio>
     <audio id="lastOneSound" src="./assets/lastone.mp3" preload="auto"></audio>
+    <audio id="lowTierSound" src="./assets/low-tier.mp3" preload="auto"></audio>
   </div>
 
   <!-- Draw Modal -->

@@ -177,6 +177,8 @@
   const accountText = $("#accountText");
   const boardLogo = $("#boardLogo");
   const topLogo = $("#topLogo");
+  const priceInput = $("#priceInput");
+const btnApplyPrice = $("#btnApplyPrice");
 
   const drawModal = $("#drawModal");
   const modalBackdrop = $("#modalBackdrop");
@@ -209,6 +211,7 @@
 
   const peelSound = $("#peelSound");
   const lastOneSound = $("#lastOneSound");
+  const lowTierSound = $("#lowTierSound");
 
   const modalStagePeel = $("#modalStagePeel");
   const modalStageResult = $("#modalStageResult");
@@ -1168,6 +1171,34 @@ function burstGlobalConfetti(amount = 160){
     });
   }
 
+  function stopPeelSound(){
+  if(!peelSound) return;
+
+  try{
+    peelSound.pause();
+    peelSound.currentTime = 0;
+  }catch{}
+}
+
+function playLowTierSound() {
+  if (!lowTierSound) return;
+  try {
+    stopAllRewardSounds();
+    lowTierSound.currentTime = 0;
+    lowTierSound.play().catch(() => {});
+  } catch {}
+}
+
+function stopAllRewardSounds() {
+  [fanfare, lastOneSound, lowTierSound].forEach((audio) => {
+    if (!audio) return;
+    try {
+      audio.pause();
+      audio.currentTime = 0;
+    } catch {}
+  });
+}
+
   function renderProgress() {
     const total = state.settings.totalTickets;
     const opened = Object.keys(state.used).length;
@@ -1201,6 +1232,7 @@ function burstGlobalConfetti(amount = 160){
 
     if (priceText) priceText.textContent = state.settings.priceText;
     if (accountText) accountText.textContent = state.settings.accountText;
+    if (priceInput) priceInput.value = state.settings.priceText || "";
 
     if (lastOneNameInput) lastOneNameInput.value = state.settings.lastOnePrize?.name || "";
     if (lastOneDescInput) lastOneDescInput.value = state.settings.lastOnePrize?.desc || "";
@@ -1413,17 +1445,23 @@ function fillResultPanel(data, options = {}) {
     setTimeout(() => burstConfetti(55), 240);
     playFanfare();
   } else if (tier === 3) {
-    applyRewardFxLevel("mid");
-    applyTierSpecialFx(3);
-    runModalFlash(1, 120);
-    burstConfetti(60);
-  } else if (tier === 4) {
-    applyRewardFxLevel("low");
-    runModalFlash(1, 120);
-    burstConfetti(28);
-  } else {
-    applyRewardFxLevel("low");
-  }
+  applyRewardFxLevel("mid");
+  applyTierSpecialFx(3);
+  runModalFlash(1, 120);
+  burstConfetti(60);
+  playLowTierSound();
+} else if (tier === 4) {
+  applyRewardFxLevel("low");
+  runModalFlash(1, 120);
+  burstConfetti(28);
+  playLowTierSound();
+  } else if (tier === 5) {
+  applyRewardFxLevel("low");
+  runModalFlash(1, 120);
+  playLowTierSound();
+} else {
+  applyRewardFxLevel("low");
+}
 }
 
 function openWinLogResult(log) {
@@ -1573,7 +1611,26 @@ let extraUiInjected = false;
     });
   }
 
+
+  function closeDrawModal(){
+
+  stopPeelSound();   // ← 추가
+
+  drawModal?.classList.remove("show");
+}
+
+function stopPeelSound() {
+  if (!peelSound) return;
+
+  try {
+    peelSound.pause();
+    peelSound.currentTime = 0;
+  } catch {}
+}
+
   function resetDrawModalState() {
+    stopPeelSound();
+    
     const card = drawModal?.querySelector(".modal-card");
     if (card) {
         card.classList.remove(
@@ -1657,22 +1714,27 @@ if (globalConfetti) {
   }
 
   function finishPeelReveal() {
-    if (peelDone) return;
-    peelDone = true;
+  if (peelDone) return;
+  peelDone = true;
 
-    if (modalPaper) {
-      modalPaper.style.transform = "translateX(110%)";
-      modalPaper.classList.remove("dragging");
-    }
+  stopPeelSound(); // 결과창 넘어가기 전에 바로 종료
 
-    setTimeout(() => {
-      if (modalPaper) modalPaper.style.display = "none";
-      showResultPanel();
-    }, 180);
+  if (modalPaper) {
+    modalPaper.style.transform = "translateX(110%)";
+    modalPaper.classList.remove("dragging");
   }
+
+  setTimeout(() => {
+    if (modalPaper) modalPaper.style.display = "none";
+    showResultPanel();
+  }, 180);
+}
 
  function closeModal() {
   if (!drawModal) return;
+
+  stopPeelSound();
+
   resetDrawModalState();
   drawModal.classList.remove("show");
   drawModal.style.display = "none";
@@ -1762,28 +1824,32 @@ if (globalConfetti) {
   }
 
   function playFanfare() {
-    if (!CONFIG.useFanfare || !fanfare) return;
-    try {
-      fanfare.currentTime = 0;
-      fanfare.play().catch(() => {});
-    } catch {}
-  }
+  if (!CONFIG.useFanfare || !fanfare) return;
+  try {
+    stopAllRewardSounds();
+    fanfare.currentTime = 0;
+    fanfare.play().catch(() => {});
+  } catch {}
+}
 
-  function playLastOneSound() {
-    if (!lastOneSound) return;
-    try {
-      lastOneSound.currentTime = 0;
-      lastOneSound.play().catch(() => {});
-    } catch {}
-  }
+function playLastOneSound() {
+  if (!lastOneSound) return;
+  try {
+    stopAllRewardSounds();
+    lastOneSound.currentTime = 0;
+    lastOneSound.play().catch(() => {});
+  } catch {}
+}
 
   function playPeelSound() {
-    if (!peelSound) return;
-    try {
-      peelSound.currentTime = 0;
-      peelSound.play().catch(() => {});
-    } catch {}
-  }
+  if (!peelSound) return;
+
+  try {
+    stopPeelSound();
+    peelSound.currentTime = 0;
+    peelSound.play().catch(() => {});
+  } catch {}
+}
 
   function burstConfetti(count = 44) {
   if (!modalConfetti) return;
@@ -2143,34 +2209,45 @@ function applyRewardFxLevel(level) {
     saveStore();
   });
 
-  btnApplyTitle?.addEventListener("click", () => {
-    const t = (kujiTitleInput?.value || "").trim();
-    if (!t) {
-      alert("쿠지판 이름을 입력하세요.");
-      return;
-    }
-    pushHistory();
-    state.settings.kujiTitle = t;
-    renderAll();
-    saveStore();
-  });
+  const btnApplyBasicSettings = $("#btnApplyBasicSettings");
 
-  btnApplyTickets?.addEventListener("click", () => {
-    const n = Number(totalTicketsInput?.value);
-    if (!Number.isFinite(n) || n < 1 || n > 500) {
-      alert("전체 뽑기 수는 1~500 사이로 입력하세요.");
-      return;
-    }
+btnApplyBasicSettings?.addEventListener("click", () => {
 
-    pushHistory();
-    state.settings.totalTickets = Math.floor(n);
-    closePrizeEditSection();
+  const title = (kujiTitleInput?.value || "").trim();
+  const price = (priceInput?.value || "").trim();
+  const total = Number(totalTicketsInput?.value);
+
+  if (!title) {
+    alert("쿠지판 이름을 입력하세요.");
+    return;
+  }
+
+  if (!price) {
+    alert("1회 가격을 입력하세요.");
+    return;
+  }
+
+  if (!Number.isFinite(total) || total < 1 || total > 500) {
+    alert("전체 뽑기 수는 1~500 사이로 입력하세요.");
+    return;
+  }
+
+  pushHistory();
+
+  state.settings.kujiTitle = title;
+  state.settings.priceText = price;
+
+  if (state.settings.totalTickets !== total) {
+    state.settings.totalTickets = Math.floor(total);
     rebuildAssignments();
     buildBoard(state.settings.totalTickets);
-    renderAll();
-    saveStore();
-    alert("전체 뽑기 수가 적용되었습니다. 숫자 배정이 새로 섞였습니다.");
-  });
+  }
+
+  renderAll();
+  saveStore();
+
+  alert("기본 설정이 적용되었습니다.");
+});
 
   btnAddPrize?.addEventListener("click", async () => {
     const name = (prizeNameInput?.value || "").trim();
