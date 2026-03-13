@@ -24,7 +24,7 @@
       name: "(굿즈 or 마일리지)",
       stock: 99999,
       total: 99999,
-      img: "./assets/oji_goods.png",
+      img: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/prizes/oji_goods.png",
       numbers: [],
     };
   }
@@ -138,20 +138,20 @@
   const prizeNameInput = $("#prizeNameInput");
   const prizeTierSelect = $("#prizeTierSelect");
   const prizeStockInput = $("#prizeStockInput");
-  const prizeImgInput = $("#prizeImgInput");
+  const prizeImgUrlInput = $("#prizeImgUrlInput");
   const btnAddPrize = $("#btnAddPrize");
   const adminPrizeList = $("#adminPrizeList");
 
   const lastOneNameInput = $("#lastOneNameInput");
   const lastOneDescInput = $("#lastOneDescInput");
-  const lastOneImgInput = $("#lastOneImgInput");
+  const lastOneImgUrlInput = $("#lastOneImgUrlInput");
   const btnApplyLastOne = $("#btnApplyLastOne");
   const btnClearLastOne = $("#btnClearLastOne");
 
   const boardSelect = $("#boardSelect");
   const newBoardNameInput = $("#newBoardNameInput");
-  const boardBgInput = $("#boardBgInput");
-  const boardPaperInput = $("#boardPaperInput");
+  const boardBgUrlInput = $("#boardBgUrlInput");
+  const boardPaperUrlInput = $("#boardPaperUrlInput");
   const btnCreateBoard = $("#btnCreateBoard");
   const btnApplyBoard = $("#btnApplyBoard");
   const btnDeleteBoard = $("#btnDeleteBoard");
@@ -203,7 +203,7 @@
   const editPrizeNameInput = $("#editPrizeNameInput");
   const editPrizeTierSelect = $("#editPrizeTierSelect");
   const editPrizeStockInput = $("#editPrizeStockInput");
-  const editPrizeImgInput = $("#editPrizeImgInput");
+  const editPrizeImgUrlInput = $("#editPrizeImgUrlInput");
   const btnSavePrizeEdit = $("#btnSavePrizeEdit");
   const btnCancelPrizeEdit = $("#btnCancelPrizeEdit");
   const editPrizeHint = $("#editPrizeHint");
@@ -220,16 +220,16 @@
   const modalFooter = drawModal?.querySelector(".modal-footer");
 
   let peelDragging = false;
-let peelStartX = 0;
-let peelCurrentX = 0;
-let peelDone = false;
-let pendingRevealData = null;
-let pendingDrawCommit = null;
-let pendingDrawCommitted = false;
-let currentDrawResolver = null;
-let extraUiInjected = false;
-let currentViewingLogTs = null;
-let btnEditWinnerName = null;
+  let peelStartX = 0;
+  let peelCurrentX = 0;
+  let peelDone = false;
+  let pendingRevealData = null;
+  let pendingDrawCommit = null;
+  let pendingDrawCommitted = false;
+  let currentDrawResolver = null;
+  let extraUiInjected = false;
+  let currentViewingLogTs = null;
+  let btnEditWinnerName = null;
 
   if (modalResultImg) {
     modalResultImg.onerror = () => {
@@ -258,19 +258,6 @@ let btnEditWinnerName = null;
       [clone[i], clone[j]] = [clone[j], clone[i]];
     }
     return clone;
-  }
-
-  function dataURLFromFile(file) {
-    return new Promise((resolve, reject) => {
-      if (!file) {
-        resolve(null);
-        return;
-      }
-      const reader = new FileReader();
-      reader.onload = (e) => resolve(e.target.result);
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
   }
 
   function tierLabelToTierValue(label) {
@@ -417,10 +404,23 @@ let btnEditWinnerName = null;
     }
   }
 
+  function makeLightState() {
+    return {
+      mode: state.mode,
+      used: state.used,
+      selectedNumbers: state.selectedNumbers,
+      logs: state.logs.slice(-100),
+      queue: state.queue,
+      settings: state.settings,
+      prizes: state.prizes,
+      ticketResults: state.ticketResults,
+    };
+  }
+
   function pushHistory() {
     try {
-      state.history.push(JSON.stringify(exportState()));
-      if (state.history.length > 50) state.history.shift();
+      state.history.push(JSON.stringify(makeLightState()));
+      if (state.history.length > 10) state.history.shift();
     } catch {}
   }
 
@@ -454,12 +454,8 @@ let btnEditWinnerName = null;
 
     document.body.style.backgroundImage = `url("${current.meta.bgImage || CONFIG.defaultBgImage}")`;
 
-    if (topBoardLogo) {
-      topBoardLogo.src = CONFIG.defaultBoardLogo;
-    }
-    if (topLogo) {
-      topLogo.src = CONFIG.defaultTopLogo;
-    }
+    if (topBoardLogo) topBoardLogo.src = CONFIG.defaultBoardLogo;
+    if (topLogo) topLogo.src = CONFIG.defaultTopLogo;
   }
 
   function rebuildBoardSelect() {
@@ -547,7 +543,9 @@ let btnEditWinnerName = null;
       editPrizeStockInput.value = "1";
       editPrizeStockInput.disabled = false;
     }
-    if (editPrizeImgInput) editPrizeImgInput.value = "";
+    if (editPrizeImgUrlInput) {
+      editPrizeImgUrlInput.value = "";
+    }
 
     if (editPrizeHint) {
       editPrizeHint.textContent = "이미 추첨이 시작된 뒤에는 수량 변경을 막아두었습니다.";
@@ -569,7 +567,10 @@ let btnEditWinnerName = null;
     if (editPrizeNameInput) editPrizeNameInput.value = prize.name;
     if (editPrizeTierSelect) editPrizeTierSelect.value = prize.label;
     if (editPrizeStockInput) editPrizeStockInput.value = String(prize.total);
-    if (editPrizeImgInput) editPrizeImgInput.value = "";
+    if (editPrizeImgUrlInput) {
+      editPrizeImgUrlInput.value =
+        prize.img && prize.img !== CONFIG.defaultEmptyResultImage ? prize.img : "";
+    }
 
     const anyOpened = getOpenedCount() > 0;
     if (editPrizeStockInput) {
@@ -588,7 +589,7 @@ let btnEditWinnerName = null;
     });
   }
 
-  async function savePrizeEdit() {
+  function savePrizeEdit() {
     const prize = getEditingPrize();
     if (!prize) {
       alert("수정 중인 상품이 없습니다.");
@@ -598,7 +599,7 @@ let btnEditWinnerName = null;
     const nextName = (editPrizeNameInput?.value || "").trim();
     const nextLabel = editPrizeTierSelect?.value || "A상";
     const nextTotal = Number(editPrizeStockInput?.value || 0);
-    const nextFile = editPrizeImgInput?.files?.[0];
+    const nextImgUrl = (editPrizeImgUrlInput?.value || "").trim();
 
     if (!nextName) {
       alert("상품 이름을 입력하세요.");
@@ -608,6 +609,11 @@ let btnEditWinnerName = null;
     const validLabels = ["A상", "B상", "C상", "D상", "E상"];
     if (!validLabels.includes(nextLabel)) {
       alert("등급 값이 올바르지 않습니다.");
+      return;
+    }
+
+    if (!nextImgUrl) {
+      alert("이미지 URL을 입력하세요.");
       return;
     }
 
@@ -634,17 +640,11 @@ let btnEditWinnerName = null;
     prize.name = nextName;
     prize.label = nextLabel;
     prize.tier = tierLabelToTierValue(nextLabel);
+    prize.img = nextImgUrl;
 
     if (!anyOpened) {
       prize.total = Math.floor(nextTotal);
       prize.stock = Math.floor(nextTotal);
-    }
-
-    if (nextFile) {
-      const imgSrc = await dataURLFromFile(nextFile);
-      if (imgSrc) {
-        prize.img = imgSrc;
-      }
     }
 
     state.prizes.sort((a, b) => a.tier - b.tier);
@@ -1134,6 +1134,9 @@ let btnEditWinnerName = null;
     };
 
     state.logs.push(log);
+    if (state.logs.length > 100) {
+      state.logs = state.logs.slice(-100);
+    }
 
     renderAll();
     saveStore();
@@ -1558,32 +1561,35 @@ let btnEditWinnerName = null;
   }
 
   function commitPendingDrawIfNeeded() {
-  if (!pendingDrawCommit || pendingDrawCommitted) return;
+    if (!pendingDrawCommit || pendingDrawCommitted) return;
 
-  const tx = pendingDrawCommit;
+    const tx = pendingDrawCommit;
 
-  if (tx.prize.id !== "OJI") {
-    tx.prize.stock = Math.max(0, tx.prize.stock - 1);
+    if (tx.prize.id !== "OJI") {
+      tx.prize.stock = Math.max(0, tx.prize.stock - 1);
+    }
+
+    if (tx.lastOnePrize) {
+      tx.lastOnePrize.claimed = true;
+    }
+
+    state.used[String(tx.ticketNumber)] = true;
+    state.selectedNumbers = state.selectedNumbers.filter((x) => x !== tx.ticketNumber);
+
+    state.logs.push(tx.log);
+    if (state.logs.length > 100) {
+      state.logs = state.logs.slice(-100);
+    }
+
+    if (tx.drawerInfo?.fromQueue) {
+      state.queue.shift();
+    }
+
+    pendingDrawCommitted = true;
+
+    renderAll();
+    saveStore();
   }
-
-  if (tx.lastOnePrize) {
-    tx.lastOnePrize.claimed = true;
-  }
-
-  state.used[String(tx.ticketNumber)] = true;
-  state.selectedNumbers = state.selectedNumbers.filter((x) => x !== tx.ticketNumber);
-
-  state.logs.push(tx.log);
-
-  if (tx.drawerInfo?.fromQueue) {
-    state.queue.shift();
-  }
-
-  pendingDrawCommitted = true;
-
-  renderAll();
-  saveStore();
-}
 
   function getModalFlashEl() {
     return drawModal?.querySelector(".modal-flash") || null;
@@ -1718,13 +1724,11 @@ let btnEditWinnerName = null;
       applyRewardFxLevel("ultra");
 
       card.classList.add("fx-lastone-boom");
-
       runModalFlash(4, 120);
 
       burstConfetti(280);
       setTimeout(() => burstConfetti(220), 200);
       setTimeout(() => burstConfetti(180), 400);
-
       setTimeout(() => {
         burstGlobalConfetti(240);
       }, 250);
@@ -1745,11 +1749,9 @@ let btnEditWinnerName = null;
       card.classList.add("fx-lastone-boom");
 
       runModalFlash(4, 120);
-
       burstConfetti(280);
       setTimeout(() => burstConfetti(220), 200);
       setTimeout(() => burstConfetti(180), 400);
-
       setTimeout(() => {
         burstGlobalConfetti(220);
       }, 250);
@@ -1832,31 +1834,31 @@ let btnEditWinnerName = null;
   }
 
   function openWinLogResult(log) {
-  if (!log) return;
+    if (!log) return;
 
-  openModal();
+    openModal();
 
-  currentViewingLogTs = log.ts;
-  showWinnerEditButton(true);
+    currentViewingLogTs = log.ts;
+    showWinnerEditButton(true);
 
-  fillResultPanel(
-    {
-      prizeName: log.displayPrizeName || log.prizeName || "",
-      tierText: log.displayTierText || log.prizeId || "",
-      ticketNumber: log.ticketNumber,
-      who: log.who,
-      prizeImg: log.prizeImg || "",
-      tier: log.tier || 5,
-      hasLastOne: !!log.hasLastOne,
-    },
-    { withEffects: false }
-  );
+    fillResultPanel(
+      {
+        prizeName: log.displayPrizeName || log.prizeName || "",
+        tierText: log.displayTierText || log.prizeId || "",
+        ticketNumber: log.ticketNumber,
+        who: log.who,
+        prizeImg: log.prizeImg || "",
+        tier: log.tier || 5,
+        hasLastOne: !!log.hasLastOne,
+      },
+      { withEffects: false }
+    );
 
-  if (modalTitle) modalTitle.textContent = "당첨 결과 보기";
-  if (modalSub) {
-    modalSub.textContent = log.isManual ? "관리자 수동 처리 기록" : "";
+    if (modalTitle) modalTitle.textContent = "당첨 결과 보기";
+    if (modalSub) {
+      modalSub.textContent = log.isManual ? "관리자 수동 처리 기록" : "";
+    }
   }
-}
 
   function resetBoardOnly() {
     if (!confirm("현재 쿠지판의 뽑기 진행 상황만 초기화할까요?\n상품 목록은 유지됩니다.")) return;
@@ -2037,10 +2039,10 @@ let btnEditWinnerName = null;
     peelCurrentX = 0;
     peelDone = false;
     pendingRevealData = null;
-pendingDrawCommit = null;
-pendingDrawCommitted = false;
-currentViewingLogTs = null;
-showWinnerEditButton(false);
+    pendingDrawCommit = null;
+    pendingDrawCommitted = false;
+    currentViewingLogTs = null;
+    showWinnerEditButton(false);
 
     const flash = getModalFlashEl();
     if (flash) {
@@ -2054,11 +2056,11 @@ showWinnerEditButton(false);
   }
 
   function showResultPanel() {
-  if (!pendingRevealData) return;
+    if (!pendingRevealData) return;
 
-  commitPendingDrawIfNeeded();
-  fillResultPanel(pendingRevealData, { withEffects: true });
-}
+    commitPendingDrawIfNeeded();
+    fillResultPanel(pendingRevealData, { withEffects: true });
+  }
 
   function openModal() {
     if (!drawModal) return;
@@ -2086,17 +2088,17 @@ showWinnerEditButton(false);
   }
 
   function closeModal() {
-  if (!drawModal) return;
+    if (!drawModal) return;
 
-  stopPeelSound();
+    stopPeelSound();
 
-  resetDrawModalState();
-  drawModal.classList.remove("show");
-  drawModal.style.display = "none";
-  drawModal.setAttribute("aria-hidden", "true");
+    resetDrawModalState();
+    drawModal.classList.remove("show");
+    drawModal.style.display = "none";
+    drawModal.setAttribute("aria-hidden", "true");
 
-  resolveCurrentDraw();
-}
+    resolveCurrentDraw();
+  }
 
   function applyTierNeon(tier) {
     const card = drawModal?.querySelector(".modal-card");
@@ -2286,123 +2288,123 @@ showWinnerEditButton(false);
   }
 
   async function startDraw(ticketNumber) {
-  const beforeSnap = JSON.stringify(exportState());
+    const beforeSnap = JSON.stringify(exportState());
 
-  return new Promise((resolve) => {
-    try {
-      const nKey = String(ticketNumber);
-      if (state.used[nKey]) {
-        resolve();
-        return;
-      }
-
-      currentDrawResolver = resolve;
-
-      const resultNumber = Number(state.ticketResults[nKey]);
-      if (!Number.isFinite(resultNumber)) {
-        alert("결과 번호가 없습니다.");
-        resolveCurrentDraw();
-        return;
-      }
-
-      const prize = findPrizeByResultNumber(resultNumber);
-
-      const openedBefore = Object.keys(state.used).length;
-      const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
-
-      const lastOnePrize =
-        isLastDraw &&
-        state.settings.lastOnePrize &&
-        !state.settings.lastOnePrize.claimed
-          ? state.settings.lastOnePrize
-          : null;
-
-      const drawerInfo = resolveDrawerName();
-      const who = drawerInfo.who;
-
-      const displayPrizeName = lastOnePrize
-        ? `${prize.name} + ${lastOnePrize.name}`
-        : `${prize.name}`;
-
-      const displayTierText = lastOnePrize
-        ? `${prize.label} + LAST ONE`
-        : prize.label;
-
-      const displayImg = lastOnePrize
-        ? (lastOnePrize.img || prize.img || "")
-        : (prize.img || "");
-
-      const log = {
-        ticketNumber,
-        resultNumber,
-        who,
-        prizeId: displayTierText,
-        prizeName: displayPrizeName,
-        displayPrizeName,
-        displayTierText,
-        prizeImg: displayImg,
-        hasLastOne: !!lastOnePrize,
-        tier: lastOnePrize ? 1 : prize.tier,
-        time: new Date().toLocaleTimeString("ko-KR", {
-          hour: "2-digit",
-          minute: "2-digit",
-          second: "2-digit",
-        }),
-        ts: Date.now(),
-      };
-
-      pushHistory();
-
-openModal();
-
-pendingDrawCommit = {
-  ticketNumber,
-  resultNumber,
-  prize,
-  lastOnePrize,
-  drawerInfo,
-  log,
-};
-pendingDrawCommitted = false;
-
-if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
-if (modalSub) modalSub.textContent = `결과 번호 ${resultNumber}`;
-
-runModalPeelReveal({
-  resultNumber,
-  prizeName: displayPrizeName,
-  prizeLabel: displayTierText,
-  ticketNumber,
-  who,
-  prizeImg: displayImg,
-  tier: lastOnePrize ? 1 : prize.tier,
-  hasLastOne: !!lastOnePrize,
-});
-    } catch (e) {
-      console.error("[KUJI] startDraw error:", e);
-
+    return new Promise((resolve) => {
       try {
-        importState(JSON.parse(beforeSnap));
-        buildBoard(state.settings.totalTickets);
-        renderAll();
-        saveStore();
-      } catch (rollbackError) {
-        console.error("[KUJI] rollback error:", rollbackError);
+        const nKey = String(ticketNumber);
+        if (state.used[nKey]) {
+          resolve();
+          return;
+        }
+
+        currentDrawResolver = resolve;
+
+        const resultNumber = Number(state.ticketResults[nKey]);
+        if (!Number.isFinite(resultNumber)) {
+          alert("결과 번호가 없습니다.");
+          resolveCurrentDraw();
+          return;
+        }
+
+        const prize = findPrizeByResultNumber(resultNumber);
+
+        const openedBefore = Object.keys(state.used).length;
+        const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
+
+        const lastOnePrize =
+          isLastDraw &&
+          state.settings.lastOnePrize &&
+          !state.settings.lastOnePrize.claimed
+            ? state.settings.lastOnePrize
+            : null;
+
+        const drawerInfo = resolveDrawerName();
+        const who = drawerInfo.who;
+
+        const displayPrizeName = lastOnePrize
+          ? `${prize.name} + ${lastOnePrize.name}`
+          : `${prize.name}`;
+
+        const displayTierText = lastOnePrize
+          ? `${prize.label} + LAST ONE`
+          : prize.label;
+
+        const displayImg = lastOnePrize
+          ? (lastOnePrize.img || prize.img || "")
+          : (prize.img || "");
+
+        const log = {
+          ticketNumber,
+          resultNumber,
+          who,
+          prizeId: displayTierText,
+          prizeName: displayPrizeName,
+          displayPrizeName,
+          displayTierText,
+          prizeImg: displayImg,
+          hasLastOne: !!lastOnePrize,
+          tier: lastOnePrize ? 1 : prize.tier,
+          time: new Date().toLocaleTimeString("ko-KR", {
+            hour: "2-digit",
+            minute: "2-digit",
+            second: "2-digit",
+          }),
+          ts: Date.now(),
+        };
+
+        pushHistory();
+
+        openModal();
+
+        pendingDrawCommit = {
+          ticketNumber,
+          resultNumber,
+          prize,
+          lastOnePrize,
+          drawerInfo,
+          log,
+        };
+        pendingDrawCommitted = false;
+
+        if (modalTitle) modalTitle.textContent = lastOnePrize ? "라스트원 포함 결과 공개" : "결과 공개";
+        if (modalSub) modalSub.textContent = `결과 번호 ${resultNumber}`;
+
+        runModalPeelReveal({
+          resultNumber,
+          prizeName: displayPrizeName,
+          prizeLabel: displayTierText,
+          ticketNumber,
+          who,
+          prizeImg: displayImg,
+          tier: lastOnePrize ? 1 : prize.tier,
+          hasLastOne: !!lastOnePrize,
+        });
+      } catch (e) {
+        console.error("[KUJI] startDraw error:", e);
+
+        try {
+          importState(JSON.parse(beforeSnap));
+          buildBoard(state.settings.totalTickets);
+          renderAll();
+          saveStore();
+        } catch (rollbackError) {
+          console.error("[KUJI] rollback error:", rollbackError);
+        }
+
+        pendingDrawCommit = null;
+        pendingDrawCommitted = false;
+
+        if (drawModal?.classList.contains("show")) {
+          closeModal();
+        } else {
+          resolveCurrentDraw();
+        }
+
+        alert("오류가 발생했습니다. 콘솔을 확인하세요.");
       }
-
-      pendingDrawCommit = null;
-      pendingDrawCommitted = false;
-
-      if (drawModal?.classList.contains("show")) {
-        closeModal();
-      } else {
-        resolveCurrentDraw();
-      }
-
-      alert("오류가 발생했습니다. 콘솔을 확인하세요.");
-    }
-  });
-}
+    });
+  }
 
   function rebuildAssignmentsIfNeeded() {
     const total = state.settings.totalTickets;
@@ -2504,18 +2506,24 @@ runModalPeelReveal({
     alert("기본 설정이 적용되었습니다.");
   });
 
-  btnAddPrize?.addEventListener("click", async () => {
+  btnAddPrize?.addEventListener("click", () => {
     const name = (prizeNameInput?.value || "").trim();
     const label = prizeTierSelect?.value || "A상";
     const stock = Number(prizeStockInput?.value || 0);
-    const file = prizeImgInput?.files?.[0];
+    const imgUrl = (prizeImgUrlInput?.value || "").trim();
 
     if (!name) {
       alert("상품 이름을 입력하세요.");
       return;
     }
+
     if (!Number.isFinite(stock) || stock < 1) {
       alert("수량은 1 이상이어야 합니다.");
+      return;
+    }
+
+    if (!imgUrl) {
+      alert("이미지 URL을 입력하세요.");
       return;
     }
 
@@ -2530,8 +2538,6 @@ runModalPeelReveal({
 
     pushHistory();
 
-    const imgSrc = (await dataURLFromFile(file)) || CONFIG.defaultEmptyResultImage;
-
     state.prizes.push({
       id: "P" + Date.now() + Math.random().toString(16).slice(2, 6),
       tier: tierLabelToTierValue(label),
@@ -2539,7 +2545,7 @@ runModalPeelReveal({
       name,
       stock,
       total: stock,
-      img: imgSrc,
+      img: imgUrl,
       numbers: [],
     });
 
@@ -2550,35 +2556,43 @@ runModalPeelReveal({
 
     if (prizeNameInput) prizeNameInput.value = "";
     if (prizeStockInput) prizeStockInput.value = "1";
-    if (prizeImgInput) prizeImgInput.value = "";
+    if (prizeImgUrlInput) prizeImgUrlInput.value = "";
 
     alert("상품이 추가되었습니다. 숫자가 자동 배정되었습니다.");
   });
 
-  btnApplyLastOne?.addEventListener("click", async () => {
+  btnApplyLastOne?.addEventListener("click", () => {
     const name = (lastOneNameInput?.value || "").trim();
     const desc = (lastOneDescInput?.value || "").trim() || "마지막 뽑기 오픈 시 보너스로 지급";
-    const file = lastOneImgInput?.files?.[0];
+    const imgUrl = (lastOneImgUrlInput?.value || "").trim();
 
     if (!name) {
       alert("라스트원 상품 이름을 입력하세요.");
       return;
     }
 
-    pushHistory();
+    if (!imgUrl) {
+      alert("라스트원 이미지 URL을 입력하세요.");
+      return;
+    }
 
-    const imgSrc = (await dataURLFromFile(file)) || state.settings.lastOnePrize?.img || CONFIG.defaultEmptyResultImage;
+    pushHistory();
 
     state.settings.lastOnePrize = {
       label: "LAST ONE",
       name,
       desc,
-      img: imgSrc,
+      img: imgUrl,
       claimed: false,
     };
 
     renderAll();
     saveStore();
+
+    if (lastOneNameInput) lastOneNameInput.value = "";
+    if (lastOneDescInput) lastOneDescInput.value = "";
+    if (lastOneImgUrlInput) lastOneImgUrlInput.value = "";
+
     alert("라스트원 상품이 적용되었습니다.");
   });
 
@@ -2593,24 +2607,25 @@ runModalPeelReveal({
     state.settings.lastOnePrize = null;
     if (lastOneNameInput) lastOneNameInput.value = "";
     if (lastOneDescInput) lastOneDescInput.value = "";
-    if (lastOneImgInput) lastOneImgInput.value = "";
+    if (lastOneImgUrlInput) lastOneImgUrlInput.value = "";
     renderAll();
     saveStore();
   });
 
-  btnCreateBoard?.addEventListener("click", async () => {
+  btnCreateBoard?.addEventListener("click", () => {
     const name = (newBoardNameInput?.value || "").trim();
+    const bgUrl = (boardBgUrlInput?.value || "").trim();
+    const paperUrl = (boardPaperUrlInput?.value || "").trim();
+
     if (!name) {
       alert("새 쿠지판 이름을 입력하세요.");
       return;
     }
 
     const newBoard = createDefaultBoard(name);
-    const bgSrc = await dataURLFromFile(boardBgInput?.files?.[0]);
-    const paperSrc = await dataURLFromFile(boardPaperInput?.files?.[0]);
 
-    if (bgSrc) newBoard.meta.bgImage = bgSrc;
-    if (paperSrc) newBoard.meta.paperImage = paperSrc;
+    if (bgUrl) newBoard.meta.bgImage = bgUrl;
+    if (paperUrl) newBoard.meta.paperImage = paperUrl;
 
     store.boards[newBoard.meta.id] = newBoard;
     store.currentBoardId = newBoard.meta.id;
@@ -2624,13 +2639,13 @@ runModalPeelReveal({
     saveStore();
 
     if (newBoardNameInput) newBoardNameInput.value = "";
-    if (boardBgInput) boardBgInput.value = "";
-    if (boardPaperInput) boardPaperInput.value = "";
+    if (boardBgUrlInput) boardBgUrlInput.value = "";
+    if (boardPaperUrlInput) boardPaperUrlInput.value = "";
 
     alert("새 쿠지판이 생성되었습니다.");
   });
 
-  btnApplyBoard?.addEventListener("click", async () => {
+  btnApplyBoard?.addEventListener("click", () => {
     const selectedId = boardSelect?.value;
     if (!selectedId || !store.boards[selectedId]) {
       alert("적용할 쿠지판을 선택하세요.");
@@ -2638,11 +2653,11 @@ runModalPeelReveal({
     }
 
     const target = store.boards[selectedId];
-    const bgSrc = await dataURLFromFile(boardBgInput?.files?.[0]);
-    const paperSrc = await dataURLFromFile(boardPaperInput?.files?.[0]);
+    const bgUrl = (boardBgUrlInput?.value || "").trim();
+    const paperUrl = (boardPaperUrlInput?.value || "").trim();
 
-    if (bgSrc) target.meta.bgImage = bgSrc;
-    if (paperSrc) target.meta.paperImage = paperSrc;
+    if (bgUrl) target.meta.bgImage = bgUrl;
+    if (paperUrl) target.meta.paperImage = paperUrl;
 
     store.currentBoardId = selectedId;
     importState(target.state);
@@ -2652,8 +2667,8 @@ runModalPeelReveal({
     renderAll();
     saveStore();
 
-    if (boardBgInput) boardBgInput.value = "";
-    if (boardPaperInput) boardPaperInput.value = "";
+    if (boardBgUrlInput) boardBgUrlInput.value = "";
+    if (boardPaperUrlInput) boardPaperUrlInput.value = "";
 
     alert("쿠지판이 적용되었습니다.");
   });
