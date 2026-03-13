@@ -338,7 +338,69 @@
           <div class="admin-section-title">현재 상품 목록</div>
           <div class="admin-prize-manage-list" id="adminPrizeList"></div>
         </div>
+        <!-- 상품 수정 -->
+        <div class="admin-section" id="editPrizeSection" style="display:none;">
+          <div class="admin-section-title">상품 수정</div>
 
+          <div class="admin-col">
+            <div class="field">
+              <label for="editPrizeNameInput">상품 이름</label>
+              <input
+                class="input"
+                id="editPrizeNameInput"
+                type="text"
+                placeholder="예: 피규어"
+              />
+            </div>
+
+            <div class="admin-row">
+              <div class="field grow">
+                <label for="editPrizeTierSelect">등급</label>
+                <select class="input" id="editPrizeTierSelect">
+                  <option value="A상">A상</option>
+                  <option value="B상">B상</option>
+                  <option value="C상">C상</option>
+                  <option value="D상">D상</option>
+                  <option value="E상">E상</option>
+                </select>
+              </div>
+
+              <div class="field small">
+                <label for="editPrizeStockInput">수량</label>
+                <input
+                  class="input"
+                  id="editPrizeStockInput"
+                  type="number"
+                  min="1"
+                  step="1"
+                  value="1"
+                />
+              </div>
+            </div>
+
+            <div class="field">
+              <label for="editPrizeImgInput">이미지 변경 (선택)</label>
+              <input
+                class="input"
+                id="editPrizeImgInput"
+                type="file"
+                accept="image/*"
+              />
+            </div>
+
+            <div class="admin-action-grid">
+              <button class="btn ok" id="btnSavePrizeEdit" type="button">수정 저장</button>
+              <button class="btn" id="btnCancelPrizeEdit" type="button">취소</button>
+            </div>
+
+            <div
+              id="editPrizeHint"
+              style="font-size:12px; color:rgba(255,255,255,.68); line-height:1.5;"
+            >
+              이미 추첨이 시작된 뒤에는 수량 변경을 막아두었습니다.
+            </div>
+          </div>
+        </div>
         <!-- 쿠지판 변경 -->
         <div class="admin-section">
           <div class="admin-section-title">쿠지판 변경</div>
@@ -451,7 +513,23 @@
       </div>
     </div>
   </div>
+    <!-- 상품 미리보기 모달 -->
+  <div class="preview-modal" id="previewModal" aria-hidden="true">
+    <div class="preview-backdrop" id="previewBackdrop"></div>
 
+    <div class="preview-card">
+      <button class="preview-close" id="previewClose" type="button">닫기</button>
+
+      <div class="preview-head">
+        <div class="preview-title" id="previewTitle">상품 미리보기</div>
+        <div class="preview-sub" id="previewSub"></div>
+      </div>
+
+      <div class="preview-body">
+        <img id="previewImg" alt="상품 미리보기 이미지" />
+      </div>
+    </div>
+  </div>
   <script src="./app.js"></script>
 </body>
 </html>

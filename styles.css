@@ -2226,3 +2226,175 @@ label{
   50%{ transform:scale(1.008); }
   100%{ transform:scale(1); }
 }
+/* =========================
+   상품 수정 버튼 영역
+========================= */
+.admin-prize-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.admin-prize-edit{
+  border: 1px solid rgba(122,112,255,.55);
+  background: rgba(122,112,255,.14);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight: 900;
+}
+.admin-prize-edit:hover{
+  background: rgba(122,112,255,.22);
+}
+
+/* =========================
+   우측 상품 리스트 미리보기 클릭감
+========================= */
+.prizecard.previewable{
+  cursor:pointer;
+  transition: transform .16s ease, box-shadow .16s ease, border-color .16s ease;
+}
+.prizecard.previewable:hover{
+  transform: translateY(-2px) scale(1.01);
+  box-shadow:
+    0 12px 28px rgba(0,0,0,.28),
+    0 0 0 1px rgba(255,255,255,.06) inset;
+}
+
+/* =========================
+   상품 미리보기 모달
+========================= */
+.preview-modal{
+  position: fixed;
+  inset: 0;
+  display: none;
+  z-index: 1000000;
+}
+
+.preview-modal.show{
+  display: block;
+}
+
+.preview-backdrop{
+  position: absolute;
+  inset: 0;
+  background: rgba(0,0,0,.72);
+  backdrop-filter: blur(6px);
+  z-index: 1;
+}
+
+.preview-card{
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: min(900px, calc(100vw - 28px));
+  max-height: min(88vh, 900px);
+  border-radius: 20px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(10,12,18,.96);
+  box-shadow: 0 28px 90px rgba(0,0,0,.68);
+  overflow: hidden;
+  z-index: 2;
+}
+
+.preview-close{
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  border: 1px solid rgba(255,255,255,.14);
+  background: rgba(255,255,255,.06);
+  color: #fff;
+  border-radius: 12px;
+  padding: 10px 12px;
+  cursor: pointer;
+  z-index: 5;
+  pointer-events: auto;
+}
+
+.preview-close:hover{
+  background: rgba(255,255,255,.12);
+}
+
+.preview-head{
+  padding: 16px 18px 14px;
+  border-bottom: 1px solid rgba(255,255,255,.10);
+  background: rgba(0,0,0,.18);
+  text-align: center;
+}
+
+.preview-title{
+  font-size: 24px;
+  font-weight: 950;
+  color: #fff3bf;
+}
+
+.preview-sub{
+  margin-top: 6px;
+  font-size: 13px;
+  color: rgba(255,255,255,.72);
+}
+
+.preview-body{
+  padding: 20px;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  min-height: 320px;
+  max-height: calc(88vh - 90px);
+}
+
+.preview-body img{
+  max-width: 100%;
+  max-height: calc(88vh - 150px);
+  width: auto;
+  height: auto;
+  object-fit: contain;
+  border-radius: 18px;
+  border: 1px solid rgba(255,255,255,.12);
+  background: rgba(255,255,255,.03);
+  padding: 16px;
+}
+
+.admin-prize-actions{
+  display:flex;
+  align-items:center;
+  gap:8px;
+  flex-wrap:wrap;
+}
+
+.admin-prize-edit{
+  border: 1px solid rgba(122,112,255,.55);
+  background: rgba(122,112,255,.14);
+  color: var(--text);
+  padding: 10px 12px;
+  border-radius: 12px;
+  cursor:pointer;
+  font-weight: 900;
+}
+.admin-prize-edit:hover{
+  background: rgba(122,112,255,.22);
+}
+
+#editPrizeSection{
+  animation: editSectionFade .18s ease;
+}
+
+@keyframes editSectionFade{
+  from{
+    opacity:0;
+    transform: translateY(4px);
+  }
+  to{
+    opacity:1;
+    transform: translateY(0);
+  }
+}
+.prizecard.previewable{
+  cursor: pointer;
+}
+.prizecard.previewable *{
+  pointer-events: none;
+}
