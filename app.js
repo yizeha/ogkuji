@@ -30,14 +30,16 @@
   }
 
   function createDefaultSettings() {
-    return {
-      totalTickets: CONFIG.defaultTotalTickets,
-      kujiTitle: "오지상 쿠지",
-      lastOnePrize: null,
-      priceText: "14,000원",
-      accountText: "기업은행 153-084786-01019 양*준",
-    };
-  }
+  return {
+    totalTickets: CONFIG.defaultTotalTickets,
+    kujiTitle: "오지상 쿠지",
+    lastOnePrize: null,
+    priceText: "14,000원",
+    accountText: "기업은행 153-084786-01019 양*준",
+    soundVolume: 0.35,
+    soundMuted: false,
+  };
+}
 
   function createBoardMeta(name = "기본 쿠지판") {
     return {
@@ -218,6 +220,9 @@ const btnApplyPrice = $("#btnApplyPrice");
   const modalPaperImg = $("#modalPaperImg");
   const modalResultPanel = $("#modalResultPanel");
 
+  const btnToggleSound = $("#btnToggleSound");
+const soundVolumeRange = $("#soundVolumeRange");
+
   if (modalResultImg) {
     modalResultImg.onerror = () => {
       modalResultImg.onerror = null;
@@ -369,6 +374,13 @@ function burstGlobalConfetti(amount = 160){
     state.settings.accountText = state.settings.accountText || "기업은행 153-084786-01019 양*준";
     state.settings.lastOnePrize = normalizeLastOnePrize(state.settings.lastOnePrize);
 
+if (typeof state.settings.soundVolume !== "number") {
+  state.settings.soundVolume = 0.35;
+}
+if (typeof state.settings.soundMuted !== "boolean") {
+  state.settings.soundMuted = false;
+}
+
     if (Array.isArray(payload?.prizes) && payload.prizes.length > 0) {
       state.prizes = payload.prizes.map(normalizePrize);
     } else {
@@ -382,6 +394,30 @@ function burstGlobalConfetti(amount = 160){
     state.prizes.sort((a, b) => a.tier - b.tier);
     state.ticketResults = payload?.ticketResults || {};
   }
+
+  function getAllAudioEls() {
+  return [fanfare, peelSound, lastOneSound, lowTierSound].filter(Boolean);
+}
+
+function applySoundSettings() {
+  const volume = state.settings.soundMuted ? 0 : state.settings.soundVolume;
+
+  getAllAudioEls().forEach((audio) => {
+    try {
+      audio.volume = Math.max(0, Math.min(1, volume));
+      audio.muted = !!state.settings.soundMuted;
+    } catch {}
+  });
+
+  if (soundVolumeRange) {
+    soundVolumeRange.value = String(Math.round((state.settings.soundVolume || 0) * 100));
+  }
+
+  if (btnToggleSound) {
+    btnToggleSound.textContent = state.settings.soundMuted ? "🔇 음소거" : "🔊 사운드";
+    btnToggleSound.classList.toggle("muted", !!state.settings.soundMuted);
+  }
+}
 
   function getCurrentBoard() {
     return store.boards[store.currentBoardId];
@@ -1225,6 +1261,7 @@ function stopAllRewardSounds() {
     renderControlState();
     rebuildBoardSelect();
     applyBoardVisual();
+    applySoundSettings();
 
     if (kujiTitleText) kujiTitleText.textContent = state.settings.kujiTitle;
     if (kujiTitleInput) kujiTitleInput.value = state.settings.kujiTitle;
@@ -2488,6 +2525,24 @@ btnApplyBasicSettings?.addEventListener("click", () => {
       }
     }
   });
+  
+  btnToggleSound?.addEventListener("click", () => {
+  state.settings.soundMuted = !state.settings.soundMuted;
+  applySoundSettings();
+  saveStore();
+});
+
+soundVolumeRange?.addEventListener("input", () => {
+  const nextVolume = Number(soundVolumeRange.value) / 100;
+  state.settings.soundVolume = Math.max(0, Math.min(1, nextVolume));
+
+  if (state.settings.soundVolume > 0 && state.settings.soundMuted) {
+    state.settings.soundMuted = false;
+  }
+
+  applySoundSettings();
+  saveStore();
+});
 
   loadStore();
 rebuildAssignmentsIfNeeded();

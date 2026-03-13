@@ -49,8 +49,21 @@
       </div>
 
       <div class="topbar-right">
-        <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
-      </div>
+  <div class="sound-control">
+    <button class="sound-btn" id="btnToggleSound" type="button">🔊 사운드</button>
+    <input
+      class="sound-range"
+      id="soundVolumeRange"
+      type="range"
+      min="0"
+      max="100"
+      step="1"
+      value="35"
+    />
+  </div>
+
+  <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
+</div>
     </header>
 
     <section class="layout">
