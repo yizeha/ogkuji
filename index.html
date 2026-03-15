@@ -49,21 +49,22 @@
       </div>
 
       <div class="topbar-right">
-        <div class="sound-control">
-          <button class="sound-btn" id="btnToggleSound" type="button">🔊 사운드</button>
-          <input
-            class="sound-range"
-            id="soundVolumeRange"
-            type="range"
-            min="0"
-            max="100"
-            step="1"
-            value="35"
-          />
-        </div>
+  <div class="sound-control">
+    <button class="sound-btn" id="btnToggleSound" type="button">🔊 사운드</button>
+    <input
+      class="sound-range"
+      id="soundVolumeRange"
+      type="range"
+      min="0"
+      max="100"
+      step="1"
+      value="35"
+    />
+  </div>
 
-        <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
-      </div>
+  <button class="member-btn" id="btnToggleMember" type="button">회원 패널</button>
+  <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
+</div>
     </header>
 
     <section class="layout">
@@ -485,7 +486,75 @@
 
       </div>
     </aside>
+<!-- 회원 패널 -->
+<aside class="member-panel" id="memberPanel">
+  <div class="member-head">
+    <div class="member-title">회원 패널</div>
+    <button class="member-close" id="btnCloseMember" type="button">닫기</button>
+  </div>
 
+  <div class="member-body">
+    <div class="member-section">
+      <div class="member-section-title">회원 등록 / 선택</div>
+
+      <div class="member-col">
+        <div class="field">
+          <label for="memberNameInput">닉네임</label>
+          <input
+            class="input"
+            id="memberNameInput"
+            type="text"
+            placeholder="예: 오지"
+          />
+        </div>
+
+        <div class="member-action-grid">
+          <button class="btn ok" id="btnAddMember" type="button">회원 등록</button>
+          <button class="btn" id="btnUseMemberForDraw" type="button">닉네임 칸에 넣기</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="member-section">
+      <div class="member-section-title">회원 목록</div>
+      <div class="member-list" id="memberList"></div>
+    </div>
+
+    <div class="member-section">
+      <div class="member-section-title">회원 상세</div>
+      <div class="member-detail-empty" id="memberDetailEmpty">회원을 선택해주세요.</div>
+
+      <div class="member-detail" id="memberDetail" style="display:none;">
+        <div class="member-detail-top">
+          <div>
+            <div class="member-detail-name" id="memberDetailName">-</div>
+            <div class="member-detail-sub" id="memberDetailSub">-</div>
+          </div>
+
+          <div class="member-mileage-box">
+            <div class="member-mileage-label">총 마일리지</div>
+            <div class="member-mileage-value" id="memberDetailMileage">0원</div>
+          </div>
+        </div>
+
+        <div class="member-action-grid">
+          <button class="btn primary" id="btnRenameMember" type="button">닉네임 수정</button>
+          <button class="btn danger" id="btnDeleteMember" type="button">회원 삭제</button>
+        </div>
+
+        <div class="member-log-wrap">
+          <div class="member-log-title">마일리지 적립 내역</div>
+          <div class="member-log-list" id="memberMileageLogList"></div>
+        </div>
+
+        <div class="member-log-wrap">
+          <div class="member-log-title">당첨 내역</div>
+          <div class="member-log-list" id="memberWinLogList"></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</aside>
     <audio id="fanfare" src="./assets/fanfare.mp3" preload="auto"></audio>
     <audio id="peelSound" src="./assets/peel.mp3" preload="auto"></audio>
     <audio id="lastOneSound" src="./assets/lastone.mp3" preload="auto"></audio>

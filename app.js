@@ -41,6 +41,13 @@
     };
   }
 
+    function createDefaultMembers() {
+    return {
+      selectedId: null,
+      list: [],
+    };
+  }
+
   function createBoardMeta(name = "기본 쿠지판") {
     return {
       id: uid(),
@@ -53,7 +60,7 @@
   function createDefaultBoard(name = "기본 쿠지판") {
     return {
       meta: createBoardMeta(name),
-      state: {
+            state: {
         mode: "broadcast",
         used: {},
         selectedNumbers: [],
@@ -63,6 +70,7 @@
         settings: createDefaultSettings(),
         prizes: [createDefaultOjiPrize()],
         ticketResults: {},
+        members: createDefaultMembers(),
       },
     };
   }
@@ -97,7 +105,7 @@
     boards: {},
   };
 
-  const state = {
+    const state = {
     mode: "broadcast",
     used: {},
     selectedNumbers: [],
@@ -108,6 +116,8 @@
     prizes: [createDefaultOjiPrize()],
     ticketResults: {},
     editingPrizeId: null,
+    members: createDefaultMembers(),
+    selectedMemberId: null,
   };
 
   const board = $("#board");
@@ -219,6 +229,24 @@
   const modalHeader = drawModal?.querySelector(".modal-header");
   const btnAutoPeel = $("#btnAutoPeel");
 
+    const btnToggleMember = $("#btnToggleMember");
+  const memberPanel = $("#memberPanel");
+  const btnCloseMember = $("#btnCloseMember");
+  const memberNameInput = $("#memberNameInput");
+  const btnAddMember = $("#btnAddMember");
+  const btnUseMemberForDraw = $("#btnUseMemberForDraw");
+  const memberList = $("#memberList");
+
+  const memberDetailEmpty = $("#memberDetailEmpty");
+  const memberDetail = $("#memberDetail");
+  const memberDetailName = $("#memberDetailName");
+  const memberDetailSub = $("#memberDetailSub");
+  const memberDetailMileage = $("#memberDetailMileage");
+  const btnRenameMember = $("#btnRenameMember");
+  const btnDeleteMember = $("#btnDeleteMember");
+  const memberMileageLogList = $("#memberMileageLogList");
+  const memberWinLogList = $("#memberWinLogList");
+
   let peelDragging = false;
   let peelStartX = 0;
   let peelCurrentX = 0;
@@ -298,7 +326,7 @@ let btnEditWinnerName = null;
     };
   }
 
-  function exportState() {
+    function exportState() {
     return {
       mode: state.mode,
       used: state.used,
@@ -308,6 +336,7 @@ let btnEditWinnerName = null;
       settings: state.settings,
       prizes: state.prizes,
       ticketResults: state.ticketResults,
+      members: state.members,
     };
   }
 
@@ -350,6 +379,17 @@ let btnEditWinnerName = null;
 
     state.prizes.sort((a, b) => a.tier - b.tier);
     state.ticketResults = payload?.ticketResults || {};
+
+        state.members = payload?.members || createDefaultMembers();
+
+    if (!Array.isArray(state.members.list)) {
+      state.members.list = [];
+    }
+    if (!("selectedId" in state.members)) {
+      state.members.selectedId = null;
+    }
+
+    state.selectedMemberId = state.members.selectedId || null;
   }
 
   function getCurrentBoard() {
@@ -404,7 +444,7 @@ let btnEditWinnerName = null;
     }
   }
 
-  function makeLightState() {
+    function makeLightState() {
     return {
       mode: state.mode,
       used: state.used,
@@ -414,6 +454,7 @@ let btnEditWinnerName = null;
       settings: state.settings,
       prizes: state.prizes,
       ticketResults: state.ticketResults,
+      members: state.members,
     };
   }
 
@@ -1087,12 +1128,12 @@ let btnEditWinnerName = null;
 
     manualCount = Math.floor(Number(countInput));
     if (!Number.isFinite(manualCount) || manualCount < 1) {
-      alert("수량은 1 이상 숫자로 입력해주이소.");
+      alert("수량은 1 이상 숫자로 입력해주세요.");
       return;
     }
 
     if (manualCount > remainOjiCount) {
-      alert(`남은 오지상 가능 수량은 ${remainOjiCount}장입니더.`);
+      alert(`남은 오지상 가능 수량은 ${remainOjiCount}장입니다.`);
       return;
     }
   } else {
@@ -1103,14 +1144,14 @@ let btnEditWinnerName = null;
   }
 
   const nickname = prompt(
-    `${prize.label} ${prize.name}\n수동 당첨 닉네임을 입력해주이소.`,
+    `${prize.label} ${prize.name}\n수동 당첨 닉네임을 입력해주세요.`,
     ""
   );
   if (nickname === null) return;
 
   const who = String(nickname || "").trim();
   if (!who) {
-    alert("닉네임을 입력해야 합니더.");
+    alert("닉네임을 입력해야 합니다.");
     return;
   }
 
@@ -1175,8 +1216,22 @@ let btnEditWinnerName = null;
       isManual: true,
     };
 
-    state.logs.push(log);
+        state.logs.push(log);
     createdLogs.push(log);
+
+    addWinLogToMember(who, log);
+
+    if (prize.id === "OJI") {
+      addMileageToMember(
+        who,
+        1000,
+        "오지상 기본상 수동 적립",
+        {
+          ticketNumber: matched.ticketNumber,
+          resultNumber: matched.resultNumber,
+        }
+      );
+    }
   }
 
   if (state.logs.length > 100) {
@@ -1462,6 +1517,341 @@ let btnEditWinnerName = null;
     if (statOpenedTickets) statOpenedTickets.textContent = `${opened}장`;
   }
 
+    function formatWon(value) {
+    return `${Number(value || 0).toLocaleString("ko-KR")}원`;
+  }
+
+  function nowKoreanTimeText() {
+    return new Date().toLocaleString("ko-KR", {
+      year: "numeric",
+      month: "2-digit",
+      day: "2-digit",
+      hour: "2-digit",
+      minute: "2-digit",
+      second: "2-digit",
+    });
+  }
+
+  function createMember(name) {
+    return {
+      id: uid(),
+      name: String(name || "").trim(),
+      mileage: 0,
+      mileageLogs: [],
+      winLogs: [],
+      createdAt: Date.now(),
+    };
+  }
+
+  function getSelectedMember() {
+    return state.members.list.find((m) => m.id === state.selectedMemberId) || null;
+  }
+
+  function selectMember(memberId) {
+    state.selectedMemberId = memberId || null;
+    state.members.selectedId = state.selectedMemberId;
+    renderMembers();
+    saveStore();
+  }
+
+  function findMemberByName(name) {
+    const normalized = String(name || "").trim().toLowerCase();
+    if (!normalized) return null;
+    return (
+      state.members.list.find((m) => String(m.name || "").trim().toLowerCase() === normalized) || null
+    );
+  }
+
+  function ensureMemberByName(name) {
+    const trimmed = String(name || "").trim();
+    if (!trimmed) return null;
+
+    let member = findMemberByName(trimmed);
+    if (member) return member;
+
+    member = createMember(trimmed);
+    state.members.list.push(member);
+    state.members.list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    return member;
+  }
+
+  function addMemberFromInput() {
+    const name = (memberNameInput?.value || "").trim();
+    if (!name) {
+      alert("닉네임을 입력해주세요.");
+      return;
+    }
+
+    const exists = findMemberByName(name);
+    if (exists) {
+      state.selectedMemberId = exists.id;
+      state.members.selectedId = exists.id;
+      renderMembers();
+      saveStore();
+      alert("이미 등록된 회원입니다.");
+      return;
+    }
+
+    pushHistory();
+    const member = createMember(name);
+    state.members.list.push(member);
+    state.members.list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    state.selectedMemberId = member.id;
+    state.members.selectedId = member.id;
+
+    if (memberNameInput) memberNameInput.value = "";
+
+    renderMembers();
+    saveStore();
+  }
+
+  function useSelectedMemberForDraw() {
+    const member = getSelectedMember();
+    if (!member) {
+      alert("먼저 회원을 선택해주세요.");
+      return;
+    }
+
+    if (drawNicknameInput) {
+      drawNicknameInput.value = member.name;
+    }
+  }
+
+  function renameSelectedMember() {
+    const member = getSelectedMember();
+    if (!member) {
+      alert("수정할 회원이 없습니다.");
+      return;
+    }
+
+    const nextName = prompt("새 닉네임을 입력해주세요.", member.name || "");
+    if (nextName === null) return;
+
+    const trimmed = String(nextName || "").trim();
+    if (!trimmed) {
+      alert("닉네임은 비워둘 수 없습니다.");
+      return;
+    }
+
+    const duplicated = state.members.list.find(
+      (m) => m.id !== member.id && String(m.name || "").trim().toLowerCase() === trimmed.toLowerCase()
+    );
+    if (duplicated) {
+      alert("같은 닉네임의 회원이 이미 있습니다.");
+      return;
+    }
+
+    pushHistory();
+
+    const oldName = member.name;
+    member.name = trimmed;
+
+    state.logs.forEach((log) => {
+      if (log.who === oldName) log.who = trimmed;
+    });
+
+    member.winLogs.forEach((log) => {
+      log.who = trimmed;
+    });
+
+    renderAll();
+    saveStore();
+  }
+
+  function deleteSelectedMember() {
+    const member = getSelectedMember();
+    if (!member) {
+      alert("삭제할 회원이 없습니다.");
+      return;
+    }
+
+    if (!confirm(`${member.name} 회원을 삭제할까요?\n회원 마일리지/회원 기록만 삭제됩니다.`)) return;
+
+    pushHistory();
+
+    state.members.list = state.members.list.filter((m) => m.id !== member.id);
+    state.selectedMemberId = null;
+    state.members.selectedId = null;
+
+    renderMembers();
+    saveStore();
+  }
+
+  function addMileageToMember(memberName, amount, reason, logData = {}) {
+    const member = ensureMemberByName(memberName);
+    if (!member) return;
+
+    member.mileage += Number(amount || 0);
+
+    member.mileageLogs.unshift({
+      id: uid(),
+      amount: Number(amount || 0),
+      reason: reason || "적립",
+      timeText: nowKoreanTimeText(),
+      ts: Date.now(),
+      ticketNumber: logData.ticketNumber || null,
+      resultNumber: logData.resultNumber || null,
+    });
+
+    if (member.mileageLogs.length > 200) {
+      member.mileageLogs = member.mileageLogs.slice(0, 200);
+    }
+
+    state.selectedMemberId = member.id;
+    state.members.selectedId = member.id;
+  }
+
+  function addWinLogToMember(memberName, log) {
+    const member = ensureMemberByName(memberName);
+    if (!member) return;
+
+    member.winLogs.unshift({
+      id: uid(),
+      prizeName: log.displayPrizeName || log.prizeName || "",
+      prizeId: log.displayTierText || log.prizeId || "",
+      ticketNumber: log.ticketNumber,
+      resultNumber: log.resultNumber,
+      who: log.who,
+      hasLastOne: !!log.hasLastOne,
+      isManual: !!log.isManual,
+      time: log.time || "",
+      ts: log.ts || Date.now(),
+    });
+
+    if (member.winLogs.length > 200) {
+      member.winLogs = member.winLogs.slice(0, 200);
+    }
+
+    state.selectedMemberId = member.id;
+    state.members.selectedId = member.id;
+  }
+
+  function openMemberPanel() {
+    if (!memberPanel) return;
+    memberPanel.classList.add("show");
+  }
+
+  function closeMemberPanel() {
+    if (!memberPanel) return;
+    memberPanel.classList.remove("show");
+  }
+
+  function renderMembers() {
+    if (!memberList) return;
+    memberList.innerHTML = "";
+
+    const members = state.members.list.slice().sort((a, b) => {
+      if (b.mileage !== a.mileage) return b.mileage - a.mileage;
+      return a.name.localeCompare(b.name, "ko");
+    });
+
+    if (!members.length) {
+      const empty = document.createElement("div");
+      empty.className = "member-detail-empty";
+      empty.textContent = "등록된 회원이 없습니다.";
+      memberList.appendChild(empty);
+    } else {
+      members.forEach((member) => {
+        const card = document.createElement("div");
+        card.className = "member-card";
+        if (member.id === state.selectedMemberId) card.classList.add("active");
+
+        const main = document.createElement("div");
+        main.className = "member-card-main";
+
+        const name = document.createElement("div");
+        name.className = "member-card-name";
+        name.textContent = member.name;
+
+        const sub = document.createElement("div");
+        sub.className = "member-card-sub";
+        sub.textContent = `적립 ${member.mileageLogs.length}건 · 당첨 ${member.winLogs.length}건`;
+
+        const mileage = document.createElement("div");
+        mileage.className = "member-card-mileage";
+        mileage.textContent = formatWon(member.mileage);
+
+        main.appendChild(name);
+        main.appendChild(sub);
+
+        card.appendChild(main);
+        card.appendChild(mileage);
+
+        card.addEventListener("click", () => {
+          selectMember(member.id);
+        });
+
+        memberList.appendChild(card);
+      });
+    }
+
+    const selected = getSelectedMember();
+
+    if (!selected) {
+      if (memberDetailEmpty) memberDetailEmpty.style.display = "block";
+      if (memberDetail) memberDetail.style.display = "none";
+      return;
+    }
+
+    if (memberDetailEmpty) memberDetailEmpty.style.display = "none";
+    if (memberDetail) memberDetail.style.display = "flex";
+
+    if (memberDetailName) memberDetailName.textContent = selected.name;
+    if (memberDetailSub) {
+      memberDetailSub.textContent = `등록일 ${new Date(selected.createdAt).toLocaleDateString("ko-KR")} · 적립 ${selected.mileageLogs.length}건 · 당첨 ${selected.winLogs.length}건`;
+    }
+    if (memberDetailMileage) memberDetailMileage.textContent = formatWon(selected.mileage);
+
+    if (memberMileageLogList) {
+      memberMileageLogList.innerHTML = "";
+      if (!selected.mileageLogs.length) {
+        const empty = document.createElement("div");
+        empty.className = "member-detail-empty";
+        empty.textContent = "마일리지 적립 내역이 없습니다.";
+        memberMileageLogList.appendChild(empty);
+      } else {
+        selected.mileageLogs.forEach((log) => {
+          const item = document.createElement("div");
+          item.className = "member-log-item";
+          item.innerHTML = `
+            <div class="member-log-main">+${formatWon(log.amount)} · ${log.reason}</div>
+            <div class="member-log-sub">
+              ${log.timeText}
+              ${log.ticketNumber ? ` · 종이 ${log.ticketNumber}` : ""}
+              ${log.resultNumber ? ` · 번호 ${log.resultNumber}` : ""}
+            </div>
+          `;
+          memberMileageLogList.appendChild(item);
+        });
+      }
+    }
+
+    if (memberWinLogList) {
+      memberWinLogList.innerHTML = "";
+      if (!selected.winLogs.length) {
+        const empty = document.createElement("div");
+        empty.className = "member-detail-empty";
+        empty.textContent = "당첨 내역이 없습니다.";
+        memberWinLogList.appendChild(empty);
+      } else {
+        selected.winLogs.forEach((log) => {
+          const item = document.createElement("div");
+          item.className = "member-log-item";
+          item.innerHTML = `
+            <div class="member-log-main">${log.prizeId} · ${log.prizeName}</div>
+            <div class="member-log-sub">
+              ${log.time || ""}
+              ${log.ticketNumber ? ` · 종이 ${log.ticketNumber}` : ""}
+              ${log.resultNumber ? ` · 번호 ${log.resultNumber}` : ""}
+              ${log.isManual ? " · 수동처리" : ""}
+            </div>
+          `;
+          memberWinLogList.appendChild(item);
+        });
+      }
+    }
+  }
+
   function renderAll() {
     renderBoardState();
     renderPrizes();
@@ -1473,6 +1863,38 @@ let btnEditWinnerName = null;
     rebuildBoardSelect();
     applyBoardVisual();
     applySoundSettings();
+
+    if (kujiTitleText) kujiTitleText.textContent = state.settings.kujiTitle;
+    if (kujiTitleInput) kujiTitleInput.value = state.settings.kujiTitle;
+    if (totalTicketsInput) totalTicketsInput.value = String(state.settings.totalTickets);
+
+    if (priceText) priceText.textContent = state.settings.priceText;
+    if (accountText) accountText.textContent = state.settings.accountText;
+    if (priceInput) priceInput.value = state.settings.priceText || "";
+
+    if (lastOneNameInput) lastOneNameInput.value = state.settings.lastOnePrize?.name || "";
+    if (lastOneDescInput) lastOneDescInput.value = state.settings.lastOnePrize?.desc || "";
+
+    if (state.editingPrizeId) {
+      const editingPrize = getEditingPrize();
+      if (!editingPrize) closePrizeEditSection();
+    } else {
+      if (editPrizeSection) editPrizeSection.style.display = "none";
+    }
+  }
+
+    function renderAll() {
+    renderBoardState();
+    renderPrizes();
+    renderAdminPrizeList();
+    renderWinList();
+    renderQueue();
+    renderProgress();
+    renderControlState();
+    rebuildBoardSelect();
+    applyBoardVisual();
+    applySoundSettings();
+    renderMembers();
 
     if (kujiTitleText) kujiTitleText.textContent = state.settings.kujiTitle;
     if (kujiTitleInput) kujiTitleInput.value = state.settings.kujiTitle;
@@ -1625,8 +2047,22 @@ let btnEditWinnerName = null;
     state.used[String(tx.ticketNumber)] = true;
     state.selectedNumbers = state.selectedNumbers.filter((x) => x !== tx.ticketNumber);
 
-    state.logs.push(tx.log);
+        state.logs.push(tx.log);
     if (state.logs.length > 100) state.logs = state.logs.slice(-100);
+
+    addWinLogToMember(tx.log.who, tx.log);
+
+    if (tx.prize.id === "OJI") {
+      addMileageToMember(
+        tx.log.who,
+        1000,
+        "오지상 기본상 자동 적립",
+        {
+          ticketNumber: tx.ticketNumber,
+          resultNumber: tx.resultNumber,
+        }
+      );
+    }
 
     if (tx.drawerInfo?.fromQueue) state.queue.shift();
 
@@ -1832,7 +2268,7 @@ function editCurrentViewingWinnerName() {
     return;
   }
 
-  const nextName = prompt("새 닉네임을 입력해주이소.", targetLog.who || "");
+  const nextName = prompt("새 닉네임을 입력해주세요.", targetLog.who || "");
   if (nextName === null) return;
 
   const trimmed = String(nextName || "").trim();
@@ -2323,12 +2759,24 @@ showWinnerEditButton(false);
     }, 9000);
   }
 
-  function resolveDrawerName() {
+    function resolveDrawerName() {
     const manualName = (drawNicknameInput?.value || "").trim();
-    if (manualName) return { who: manualName, fromQueue: false };
+    if (manualName) {
+      ensureMemberByName(manualName);
+      return { who: manualName, fromQueue: false };
+    }
+
+    const selectedMember = getSelectedMember();
+    if (selectedMember?.name) {
+      if (drawNicknameInput) drawNicknameInput.value = selectedMember.name;
+      return { who: selectedMember.name, fromQueue: false };
+    }
 
     const queueName = (state.queue?.[0]?.name || "").trim();
-    if (queueName) return { who: queueName, fromQueue: true };
+    if (queueName) {
+      ensureMemberByName(queueName);
+      return { who: queueName, fromQueue: true };
+    }
 
     return { who: "참여자", fromQueue: false };
   }
@@ -2806,6 +3254,25 @@ showWinnerEditButton(false);
   });
 
   btnAutoPeel?.addEventListener("click", startAutoPeel);
+
+    btnToggleMember?.addEventListener("click", () => {
+    openMemberPanel();
+  });
+
+  btnCloseMember?.addEventListener("click", () => {
+    closeMemberPanel();
+  });
+
+  btnAddMember?.addEventListener("click", addMemberFromInput);
+
+  memberNameInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addMemberFromInput();
+  });
+
+  btnUseMemberForDraw?.addEventListener("click", useSelectedMemberForDraw);
+
+  btnRenameMember?.addEventListener("click", renameSelectedMember);
+  btnDeleteMember?.addEventListener("click", deleteSelectedMember);
 
   loadStore();
   rebuildAssignmentsIfNeeded();
