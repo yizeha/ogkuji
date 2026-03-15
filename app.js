@@ -12,16 +12,46 @@
     defaultBoardLogo: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/logos/logo_board.png",
     defaultTopLogo: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/logos/logo_top.png",
     useFanfare: true,
-    MASTER_KEY: "kuji_multi_board_store_v1",
+    MASTER_KEY: "kuji_multi_board_store_v2_members_global",
     drawDelayMs: 1000,
+    defaultMileagePerOji: 1000,
   };
+
+  function sleep(ms) {
+    return new Promise((res) => setTimeout(res, ms));
+  }
+
+  function uid() {
+    try {
+      return crypto.randomUUID();
+    } catch {
+      return String(Date.now()) + Math.random().toString(16).slice(2);
+    }
+  }
+
+  function shuffle(arr) {
+    const clone = [...arr];
+    for (let i = clone.length - 1; i > 0; i--) {
+      const j = Math.floor(Math.random() * (i + 1));
+      [clone[i], clone[j]] = [clone[j], clone[i]];
+    }
+    return clone;
+  }
+
+  function deepClone(obj) {
+    try {
+      return JSON.parse(JSON.stringify(obj));
+    } catch {
+      return obj;
+    }
+  }
 
   function createDefaultOjiPrize() {
     return {
       id: "OJI",
       tier: 99,
       label: "오지상",
-      name: "(굿즈 or 마일리지)",
+      name: "마일리지 적립",
       stock: 99999,
       total: 99999,
       img: "https://pub-37a77700097c4252a3986c9f06eed562.r2.dev/logos/oji_goods.png",
@@ -41,7 +71,7 @@
     };
   }
 
-    function createDefaultMembers() {
+  function createDefaultMembers() {
     return {
       selectedId: null,
       list: [],
@@ -60,7 +90,7 @@
   function createDefaultBoard(name = "기본 쿠지판") {
     return {
       meta: createBoardMeta(name),
-            state: {
+      state: {
         mode: "broadcast",
         used: {},
         selectedNumbers: [],
@@ -70,7 +100,6 @@
         settings: createDefaultSettings(),
         prizes: [createDefaultOjiPrize()],
         ticketResults: {},
-        members: createDefaultMembers(),
       },
     };
   }
@@ -100,12 +129,31 @@
     return [base, mha, kimetsu, onepiece, aot];
   }
 
+  function normalizeMembers(payload) {
+    const base = payload || createDefaultMembers();
+
+    if (!Array.isArray(base.list)) base.list = [];
+    if (!("selectedId" in base)) base.selectedId = null;
+
+    base.list = base.list.map((m) => ({
+      id: m.id || uid(),
+      name: String(m.name || "").trim(),
+      mileage: Number(m.mileage || 0),
+      mileageLogs: Array.isArray(m.mileageLogs) ? m.mileageLogs : [],
+      winLogs: Array.isArray(m.winLogs) ? m.winLogs : [],
+      createdAt: m.createdAt || Date.now(),
+    })).filter((m) => m.name);
+
+    return base;
+  }
+
   const store = {
     currentBoardId: null,
     boards: {},
+    members: createDefaultMembers(),
   };
 
-    const state = {
+  const state = {
     mode: "broadcast",
     used: {},
     selectedNumbers: [],
@@ -116,8 +164,8 @@
     prizes: [createDefaultOjiPrize()],
     ticketResults: {},
     editingPrizeId: null,
-    members: createDefaultMembers(),
     selectedMemberId: null,
+    memberSearchKeyword: "",
   };
 
   const board = $("#board");
@@ -229,23 +277,27 @@
   const modalHeader = drawModal?.querySelector(".modal-header");
   const btnAutoPeel = $("#btnAutoPeel");
 
-    const btnToggleMember = $("#btnToggleMember");
-  const memberPanel = $("#memberPanel");
-  const btnCloseMember = $("#btnCloseMember");
-  const memberNameInput = $("#memberNameInput");
-  const btnAddMember = $("#btnAddMember");
-  const btnUseMemberForDraw = $("#btnUseMemberForDraw");
-  const memberList = $("#memberList");
-
-  const memberDetailEmpty = $("#memberDetailEmpty");
-  const memberDetail = $("#memberDetail");
-  const memberDetailName = $("#memberDetailName");
-  const memberDetailSub = $("#memberDetailSub");
-  const memberDetailMileage = $("#memberDetailMileage");
-  const btnRenameMember = $("#btnRenameMember");
-  const btnDeleteMember = $("#btnDeleteMember");
-  const memberMileageLogList = $("#memberMileageLogList");
-  const memberWinLogList = $("#memberWinLogList");
+  let btnToggleMember = null;
+  let memberPanel = null;
+  let btnCloseMember = null;
+  let memberNameInput = null;
+  let btnAddMember = null;
+  let btnUseMemberForDraw = null;
+  let memberList = null;
+  let memberDetailEmpty = null;
+  let memberDetail = null;
+  let memberDetailName = null;
+  let memberDetailSub = null;
+  let memberDetailMileage = null;
+  let btnRenameMember = null;
+  let btnDeleteMember = null;
+  let memberMileageLogList = null;
+  let memberWinLogList = null;
+  let memberSearchInput = null;
+  let btnMemberSearch = null;
+  let btnMileageAdd = null;
+  let btnMileageUse = null;
+  let btnManualWinAdd = null;
 
   let peelDragging = false;
   let peelStartX = 0;
@@ -258,8 +310,9 @@
   let pendingDrawCommitted = false;
   let currentDrawResolver = null;
   let extraUiInjected = false;
+  let memberUiInjected = false;
   let currentViewingLogTs = null;
-let btnEditWinnerName = null;
+  let btnEditWinnerName = null;
 
   if (modalResultImg) {
     modalResultImg.onerror = () => {
@@ -267,27 +320,6 @@ let btnEditWinnerName = null;
       modalResultImg.removeAttribute("src");
       modalResultImg.classList.add("is-hidden");
     };
-  }
-
-  function sleep(ms) {
-    return new Promise((res) => setTimeout(res, ms));
-  }
-
-  function uid() {
-    try {
-      return crypto.randomUUID();
-    } catch {
-      return String(Date.now()) + Math.random().toString(16).slice(2);
-    }
-  }
-
-  function shuffle(arr) {
-    const clone = [...arr];
-    for (let i = clone.length - 1; i > 0; i--) {
-      const j = Math.floor(Math.random() * (i + 1));
-      [clone[i], clone[j]] = [clone[j], clone[i]];
-    }
-    return clone;
   }
 
   function tierLabelToTierValue(label) {
@@ -326,7 +358,7 @@ let btnEditWinnerName = null;
     };
   }
 
-    function exportState() {
+  function exportBoardState() {
     return {
       mode: state.mode,
       used: state.used,
@@ -336,11 +368,10 @@ let btnEditWinnerName = null;
       settings: state.settings,
       prizes: state.prizes,
       ticketResults: state.ticketResults,
-      members: state.members,
     };
   }
 
-  function importState(payload) {
+  function importBoardState(payload) {
     state.mode = payload?.mode || "broadcast";
     state.used = payload?.used || {};
     state.selectedNumbers = Array.isArray(payload?.selectedNumbers) ? payload.selectedNumbers.map(Number) : [];
@@ -353,19 +384,13 @@ let btnEditWinnerName = null;
     if (!Number.isFinite(state.settings.totalTickets) || state.settings.totalTickets < 1) {
       state.settings.totalTickets = CONFIG.defaultTotalTickets;
     }
-    if (!state.settings.kujiTitle) {
-      state.settings.kujiTitle = "오지상 쿠지";
-    }
+    if (!state.settings.kujiTitle) state.settings.kujiTitle = "오지상 쿠지";
     state.settings.priceText = state.settings.priceText || "14,000원";
     state.settings.accountText = state.settings.accountText || "기업은행 153-084786-01019 양*준";
     state.settings.lastOnePrize = normalizeLastOnePrize(state.settings.lastOnePrize);
 
-    if (typeof state.settings.soundVolume !== "number") {
-      state.settings.soundVolume = 0.35;
-    }
-    if (typeof state.settings.soundMuted !== "boolean") {
-      state.settings.soundMuted = false;
-    }
+    if (typeof state.settings.soundVolume !== "number") state.settings.soundVolume = 0.35;
+    if (typeof state.settings.soundMuted !== "boolean") state.settings.soundMuted = false;
 
     if (Array.isArray(payload?.prizes) && payload.prizes.length > 0) {
       state.prizes = payload.prizes.map(normalizePrize);
@@ -379,26 +404,35 @@ let btnEditWinnerName = null;
 
     state.prizes.sort((a, b) => a.tier - b.tier);
     state.ticketResults = payload?.ticketResults || {};
-
-        state.members = payload?.members || createDefaultMembers();
-
-    if (!Array.isArray(state.members.list)) {
-      state.members.list = [];
-    }
-    if (!("selectedId" in state.members)) {
-      state.members.selectedId = null;
-    }
-
-    state.selectedMemberId = state.members.selectedId || null;
   }
 
   function getCurrentBoard() {
     return store.boards[store.currentBoardId];
   }
 
+  function exportSnapshot() {
+    return {
+      boardState: exportBoardState(),
+      members: deepClone(store.members),
+      selectedMemberId: state.selectedMemberId,
+      memberSearchKeyword: state.memberSearchKeyword,
+    };
+  }
+
+  function importSnapshot(snapshot) {
+    if (!snapshot) return;
+    importBoardState(snapshot.boardState || {});
+    store.members = normalizeMembers(snapshot.members);
+    state.selectedMemberId = snapshot.selectedMemberId || store.members.selectedId || null;
+    store.members.selectedId = state.selectedMemberId;
+    state.memberSearchKeyword = snapshot.memberSearchKeyword || "";
+  }
+
   function saveStore() {
     const current = getCurrentBoard();
-    if (current) current.state = exportState();
+    if (current) current.state = exportBoardState();
+    store.members = normalizeMembers(store.members);
+    store.members.selectedId = state.selectedMemberId || null;
     localStorage.setItem(CONFIG.MASTER_KEY, JSON.stringify(store));
   }
 
@@ -407,11 +441,14 @@ let btnEditWinnerName = null;
 
     if (!raw) {
       const initialBoards = createInitialBoards();
+      store.boards = {};
       initialBoards.forEach((boardObj) => {
         store.boards[boardObj.meta.id] = boardObj;
       });
       store.currentBoardId = initialBoards[0].meta.id;
-      importState(initialBoards[0].state);
+      store.members = createDefaultMembers();
+      importBoardState(initialBoards[0].state);
+      state.selectedMemberId = null;
       saveStore();
       return;
     }
@@ -420,18 +457,22 @@ let btnEditWinnerName = null;
       const parsed = JSON.parse(raw);
       store.currentBoardId = parsed.currentBoardId;
       store.boards = parsed.boards || {};
+      store.members = normalizeMembers(parsed.members);
 
       const current = getCurrentBoard();
       if (!current) {
         const initialBoards = createInitialBoards();
+        store.boards = {};
         initialBoards.forEach((boardObj) => {
           store.boards[boardObj.meta.id] = boardObj;
         });
         store.currentBoardId = initialBoards[0].meta.id;
-        importState(initialBoards[0].state);
+        importBoardState(initialBoards[0].state);
       } else {
-        importState(current.state);
+        importBoardState(current.state);
       }
+
+      state.selectedMemberId = store.members.selectedId || null;
     } catch {
       const initialBoards = createInitialBoards();
       store.boards = {};
@@ -439,28 +480,16 @@ let btnEditWinnerName = null;
         store.boards[boardObj.meta.id] = boardObj;
       });
       store.currentBoardId = initialBoards[0].meta.id;
-      importState(initialBoards[0].state);
+      store.members = createDefaultMembers();
+      importBoardState(initialBoards[0].state);
+      state.selectedMemberId = null;
       saveStore();
     }
   }
 
-    function makeLightState() {
-    return {
-      mode: state.mode,
-      used: state.used,
-      selectedNumbers: state.selectedNumbers,
-      logs: state.logs.slice(-100),
-      queue: state.queue,
-      settings: state.settings,
-      prizes: state.prizes,
-      ticketResults: state.ticketResults,
-      members: state.members,
-    };
-  }
-
   function pushHistory() {
     try {
-      state.history.push(JSON.stringify(makeLightState()));
+      state.history.push(JSON.stringify(exportSnapshot()));
       if (state.history.length > 10) state.history.shift();
     } catch {}
   }
@@ -548,11 +577,11 @@ let btnEditWinnerName = null;
   }
 
   function isOjiResultNumber(resultNumber) {
-  return !state.prizes.some((p) => {
-    if (p.id === "OJI") return false;
-    return Array.isArray(p.numbers) && p.numbers.includes(resultNumber);
-  });
-}
+    return !state.prizes.some((p) => {
+      if (p.id === "OJI") return false;
+      return Array.isArray(p.numbers) && p.numbers.includes(resultNumber);
+    });
+  }
 
   function getOpenedCount() {
     return Object.keys(state.used).length;
@@ -1057,222 +1086,222 @@ let btnEditWinnerName = null;
   }
 
   function findManualTicketForPrize(prize) {
-  if (!prize) return null;
+    if (!prize) return null;
 
-  if (prize.id === "OJI") {
-    const remainOjiTicket = Object.keys(state.ticketResults).find((ticketNo) => {
-      if (state.used[ticketNo]) return false;
-      const resultNumber = Number(state.ticketResults[ticketNo]);
-      return isOjiResultNumber(resultNumber);
+    if (prize.id === "OJI") {
+      const remainOjiTicket = Object.keys(state.ticketResults).find((ticketNo) => {
+        if (state.used[ticketNo]) return false;
+        const resultNumber = Number(state.ticketResults[ticketNo]);
+        return isOjiResultNumber(resultNumber);
+      });
+
+      if (remainOjiTicket) {
+        return {
+          ticketNumber: Number(remainOjiTicket),
+          resultNumber: Number(state.ticketResults[remainOjiTicket]),
+        };
+      }
+      return null;
+    }
+
+    const remainPrizeNumbers = (prize.numbers || []).filter((num) => {
+      const usedTicket = Object.keys(state.used).find((ticketNo) => {
+        if (!state.used[ticketNo]) return false;
+        return Number(state.ticketResults[ticketNo]) === Number(num);
+      });
+      return !usedTicket;
     });
 
-    if (remainOjiTicket) {
-      return {
-        ticketNumber: Number(remainOjiTicket),
-        resultNumber: Number(state.ticketResults[remainOjiTicket]),
-      };
+    for (const resultNumber of remainPrizeNumbers) {
+      const ticketNumber = Object.keys(state.ticketResults).find((ticketNo) => {
+        return !state.used[ticketNo] && Number(state.ticketResults[ticketNo]) === Number(resultNumber);
+      });
+
+      if (ticketNumber) {
+        return {
+          ticketNumber: Number(ticketNumber),
+          resultNumber: Number(resultNumber),
+        };
+      }
     }
+
     return null;
   }
 
-  const remainPrizeNumbers = (prize.numbers || []).filter((num) => {
-    const usedTicket = Object.keys(state.used).find((ticketNo) => {
-      if (!state.used[ticketNo]) return false;
-      return Number(state.ticketResults[ticketNo]) === Number(num);
-    });
-    return !usedTicket;
-  });
-
-  for (const resultNumber of remainPrizeNumbers) {
-    const ticketNumber = Object.keys(state.ticketResults).find((ticketNo) => {
-      return !state.used[ticketNo] && Number(state.ticketResults[ticketNo]) === Number(resultNumber);
-    });
-
-    if (ticketNumber) {
-      return {
-        ticketNumber: Number(ticketNumber),
-        resultNumber: Number(resultNumber),
-      };
-    }
-  }
-
-  return null;
-}
-
   function manualAwardPrize(prizeId) {
-  const prize = state.prizes.find((p) => p.id === prizeId);
-  if (!prize) {
-    alert("수동당첨 대상 상품이 아닙니다.");
-    return;
-  }
-
-  let manualCount = 1;
-
-  if (prize.id === "OJI") {
-    const remainOjiCount = Object.keys(state.ticketResults).filter((ticketNo) => {
-      if (state.used[ticketNo]) return false;
-      const resultNumber = Number(state.ticketResults[ticketNo]);
-      return isOjiResultNumber(resultNumber);
-    }).length;
-
-    if (remainOjiCount <= 0) {
-      alert("남아 있는 오지상 티켓이 없습니다.");
+    const prize = state.prizes.find((p) => p.id === prizeId);
+    if (!prize) {
+      alert("수동당첨 대상 상품이 아닙니다.");
       return;
     }
 
-    const countInput = prompt(
-      `오지상 수동당첨을 몇 장 처리할까요?\n남은 가능 수량: ${remainOjiCount}장`,
-      "1"
-    );
-    if (countInput === null) return;
-
-    manualCount = Math.floor(Number(countInput));
-    if (!Number.isFinite(manualCount) || manualCount < 1) {
-      alert("수량은 1 이상 숫자로 입력해주세요.");
-      return;
-    }
-
-    if (manualCount > remainOjiCount) {
-      alert(`남은 오지상 가능 수량은 ${remainOjiCount}장입니다.`);
-      return;
-    }
-  } else {
-    if (prize.stock <= 0) {
-      alert("이 상품은 이미 수량이 없습니다.");
-      return;
-    }
-  }
-
-  const nickname = prompt(
-    `${prize.label} ${prize.name}\n수동 당첨 닉네임을 입력해주세요.`,
-    ""
-  );
-  if (nickname === null) return;
-
-  const who = String(nickname || "").trim();
-  if (!who) {
-    alert("닉네임을 입력해야 합니다.");
-    return;
-  }
-
-  pushHistory();
-
-  const createdLogs = [];
-
-  for (let i = 0; i < manualCount; i++) {
-    const matched = findManualTicketForPrize(prize);
-    if (!matched) break;
-
-    const openedBefore = Object.keys(state.used).length;
-    const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
-
-    const lastOnePrize =
-      isLastDraw &&
-      state.settings.lastOnePrize &&
-      !state.settings.lastOnePrize.claimed
-        ? state.settings.lastOnePrize
-        : null;
-
-    if (prize.id !== "OJI") {
-      prize.stock = Math.max(0, prize.stock - 1);
-    }
-
-    state.used[String(matched.ticketNumber)] = true;
-    state.selectedNumbers = state.selectedNumbers.filter((x) => x !== matched.ticketNumber);
-
-    if (lastOnePrize) {
-      lastOnePrize.claimed = true;
-    }
-
-    const displayPrizeName = lastOnePrize
-      ? `${prize.name} + ${lastOnePrize.name}`
-      : prize.name;
-
-    const displayTierText = lastOnePrize
-      ? `${prize.label} + LAST ONE`
-      : prize.label;
-
-    const displayImg = lastOnePrize
-      ? (lastOnePrize.img || prize.img || "")
-      : (prize.img || "");
-
-    const log = {
-      ticketNumber: matched.ticketNumber,
-      resultNumber: matched.resultNumber,
-      who,
-      prizeId: displayTierText,
-      prizeName: displayPrizeName,
-      displayPrizeName,
-      displayTierText,
-      prizeImg: displayImg,
-      hasLastOne: !!lastOnePrize,
-      tier: lastOnePrize ? 1 : prize.tier,
-      time: new Date().toLocaleTimeString("ko-KR", {
-        hour: "2-digit",
-        minute: "2-digit",
-        second: "2-digit",
-      }),
-      ts: Date.now() + i,
-      isManual: true,
-    };
-
-        state.logs.push(log);
-    createdLogs.push(log);
-
-    addWinLogToMember(who, log);
+    let manualCount = 1;
 
     if (prize.id === "OJI") {
-      addMileageToMember(
-        who,
-        1000,
-        "오지상 기본상 수동 적립",
-        {
-          ticketNumber: matched.ticketNumber,
-          resultNumber: matched.resultNumber,
-        }
+      const remainOjiCount = Object.keys(state.ticketResults).filter((ticketNo) => {
+        if (state.used[ticketNo]) return false;
+        const resultNumber = Number(state.ticketResults[ticketNo]);
+        return isOjiResultNumber(resultNumber);
+      }).length;
+
+      if (remainOjiCount <= 0) {
+        alert("남아 있는 오지상 티켓이 없습니다.");
+        return;
+      }
+
+      const countInput = prompt(
+        `오지상 수동당첨을 몇 장 처리할까요?\n남은 가능 수량: ${remainOjiCount}장`,
+        "1"
       );
+      if (countInput === null) return;
+
+      manualCount = Math.floor(Number(countInput));
+      if (!Number.isFinite(manualCount) || manualCount < 1) {
+        alert("수량은 1 이상 숫자로 입력해주세요.");
+        return;
+      }
+
+      if (manualCount > remainOjiCount) {
+        alert(`남은 오지상 가능 수량은 ${remainOjiCount}장입니다.`);
+        return;
+      }
+    } else {
+      if (prize.stock <= 0) {
+        alert("이 상품은 이미 수량이 없습니다.");
+        return;
+      }
+    }
+
+    const nickname = prompt(
+      `${prize.label} ${prize.name}\n수동 당첨 닉네임을 입력해주세요.`,
+      ""
+    );
+    if (nickname === null) return;
+
+    const who = String(nickname || "").trim();
+    if (!who) {
+      alert("닉네임을 입력해야 합니다.");
+      return;
+    }
+
+    pushHistory();
+
+    const createdLogs = [];
+
+    for (let i = 0; i < manualCount; i++) {
+      const matched = findManualTicketForPrize(prize);
+      if (!matched) break;
+
+      const openedBefore = Object.keys(state.used).length;
+      const isLastDraw = openedBefore + 1 === state.settings.totalTickets;
+
+      const lastOnePrize =
+        isLastDraw &&
+        state.settings.lastOnePrize &&
+        !state.settings.lastOnePrize.claimed
+          ? state.settings.lastOnePrize
+          : null;
+
+      if (prize.id !== "OJI") {
+        prize.stock = Math.max(0, prize.stock - 1);
+      }
+
+      state.used[String(matched.ticketNumber)] = true;
+      state.selectedNumbers = state.selectedNumbers.filter((x) => x !== matched.ticketNumber);
+
+      if (lastOnePrize) {
+        lastOnePrize.claimed = true;
+      }
+
+      const displayPrizeName = lastOnePrize
+        ? `${prize.name} + ${lastOnePrize.name}`
+        : prize.name;
+
+      const displayTierText = lastOnePrize
+        ? `${prize.label} + LAST ONE`
+        : prize.label;
+
+      const displayImg = lastOnePrize
+        ? (lastOnePrize.img || prize.img || "")
+        : (prize.img || "");
+
+      const log = {
+        ticketNumber: matched.ticketNumber,
+        resultNumber: matched.resultNumber,
+        who,
+        prizeId: displayTierText,
+        prizeName: displayPrizeName,
+        displayPrizeName,
+        displayTierText,
+        prizeImg: displayImg,
+        hasLastOne: !!lastOnePrize,
+        tier: lastOnePrize ? 1 : prize.tier,
+        time: new Date().toLocaleTimeString("ko-KR", {
+          hour: "2-digit",
+          minute: "2-digit",
+          second: "2-digit",
+        }),
+        ts: Date.now() + i,
+        isManual: true,
+      };
+
+      state.logs.push(log);
+      createdLogs.push(log);
+
+      addWinLogToMember(who, log);
+
+      if (prize.id === "OJI") {
+        addMileageToMember(
+          who,
+          CONFIG.defaultMileagePerOji,
+          "오지상 기본상 수동 적립",
+          {
+            ticketNumber: matched.ticketNumber,
+            resultNumber: matched.resultNumber,
+          }
+        );
+      }
+    }
+
+    if (state.logs.length > 100) {
+      state.logs = state.logs.slice(-100);
+    }
+
+    renderAll();
+    saveStore();
+
+    if (!createdLogs.length) {
+      alert("처리할 수 있는 수동당첨 티켓을 찾지 못했습니다.");
+      return;
+    }
+
+    const lastLog = createdLogs[createdLogs.length - 1];
+
+    openModal();
+    fillResultPanel(
+      {
+        prizeName:
+          createdLogs.length > 1
+            ? `${lastLog.displayPrizeName} 외 ${createdLogs.length - 1}건`
+            : lastLog.displayPrizeName,
+        tierText: lastLog.displayTierText,
+        ticketNumber: lastLog.ticketNumber,
+        who,
+        prizeImg: lastLog.prizeImg,
+        tier: lastLog.tier,
+        hasLastOne: !!lastLog.hasLastOne,
+      },
+      { withEffects: true }
+    );
+
+    if (modalTitle) modalTitle.textContent = "수동 당첨 처리";
+    if (modalSub) {
+      modalSub.textContent =
+        createdLogs.length > 1
+          ? `관리자 수동 처리 · 총 ${createdLogs.length}건 처리 완료`
+          : `관리자 수동 처리 · 결과 번호 ${lastLog.resultNumber}`;
     }
   }
-
-  if (state.logs.length > 100) {
-    state.logs = state.logs.slice(-100);
-  }
-
-  renderAll();
-  saveStore();
-
-  if (!createdLogs.length) {
-    alert("처리할 수 있는 수동당첨 티켓을 찾지 못했습니다.");
-    return;
-  }
-
-  const lastLog = createdLogs[createdLogs.length - 1];
-
-  openModal();
-  fillResultPanel(
-    {
-      prizeName:
-        createdLogs.length > 1
-          ? `${lastLog.displayPrizeName} 외 ${createdLogs.length - 1}건`
-          : lastLog.displayPrizeName,
-      tierText: lastLog.displayTierText,
-      ticketNumber: lastLog.ticketNumber,
-      who,
-      prizeImg: lastLog.prizeImg,
-      tier: lastLog.tier,
-      hasLastOne: !!lastLog.hasLastOne,
-    },
-    { withEffects: true }
-  );
-
-  if (modalTitle) modalTitle.textContent = "수동 당첨 처리";
-  if (modalSub) {
-    modalSub.textContent =
-      createdLogs.length > 1
-        ? `관리자 수동 처리 · 총 ${createdLogs.length}건 처리 완료`
-        : `관리자 수동 처리 · 결과 번호 ${lastLog.resultNumber}`;
-  }
-}
 
   function renderAdminPrizeList() {
     if (!adminPrizeList) return;
@@ -1323,24 +1352,22 @@ let btnEditWinnerName = null;
       del.className = "admin-prize-delete";
 
       if (p.id === "OJI") {
-  edit.textContent = "기본";
-  edit.disabled = true;
-  edit.style.opacity = ".5";
-  edit.style.cursor = "default";
+        edit.textContent = "기본";
+        edit.disabled = true;
+        edit.style.opacity = ".5";
+        edit.style.cursor = "default";
 
-  manual.textContent = "수동당첨";
-  manual.disabled = false;
-  manual.style.opacity = "1";
-  manual.style.cursor = "pointer";
-  manual.addEventListener("click", () => manualAwardPrize(p.id));
+        manual.textContent = "수동당첨";
+        manual.disabled = false;
+        manual.style.opacity = "1";
+        manual.style.cursor = "pointer";
+        manual.addEventListener("click", () => manualAwardPrize(p.id));
 
-  del.textContent = "기본";
-  del.disabled = true;
-  del.style.opacity = ".5";
-  del.style.cursor = "default";
-}
-      
-      else {
+        del.textContent = "기본";
+        del.disabled = true;
+        del.style.opacity = ".5";
+        del.style.cursor = "default";
+      } else {
         edit.textContent = "수정";
         edit.addEventListener("click", () => openPrizeEditSection(p.id));
 
@@ -1465,14 +1492,14 @@ let btnEditWinnerName = null;
   }
 
   function playLowTierSound(tierText = "") {
-  if (tierText === "오지상") return;
-  if (!lowTierSound) return;
-  try {
-    stopAllRewardSounds();
-    lowTierSound.currentTime = 0;
-    lowTierSound.play().catch(() => {});
-  } catch {}
-}
+    if (tierText === "오지상") return;
+    if (!lowTierSound) return;
+    try {
+      stopAllRewardSounds();
+      lowTierSound.currentTime = 0;
+      lowTierSound.play().catch(() => {});
+    } catch {}
+  }
 
   function playFanfare() {
     if (!CONFIG.useFanfare || !fanfare) return;
@@ -1517,7 +1544,7 @@ let btnEditWinnerName = null;
     if (statOpenedTickets) statOpenedTickets.textContent = `${opened}장`;
   }
 
-    function formatWon(value) {
+  function formatWon(value) {
     return `${Number(value || 0).toLocaleString("ko-KR")}원`;
   }
 
@@ -1544,12 +1571,12 @@ let btnEditWinnerName = null;
   }
 
   function getSelectedMember() {
-    return state.members.list.find((m) => m.id === state.selectedMemberId) || null;
+    return store.members.list.find((m) => m.id === state.selectedMemberId) || null;
   }
 
   function selectMember(memberId) {
     state.selectedMemberId = memberId || null;
-    state.members.selectedId = state.selectedMemberId;
+    store.members.selectedId = state.selectedMemberId;
     renderMembers();
     saveStore();
   }
@@ -1558,7 +1585,7 @@ let btnEditWinnerName = null;
     const normalized = String(name || "").trim().toLowerCase();
     if (!normalized) return null;
     return (
-      state.members.list.find((m) => String(m.name || "").trim().toLowerCase() === normalized) || null
+      store.members.list.find((m) => String(m.name || "").trim().toLowerCase() === normalized) || null
     );
   }
 
@@ -1570,8 +1597,8 @@ let btnEditWinnerName = null;
     if (member) return member;
 
     member = createMember(trimmed);
-    state.members.list.push(member);
-    state.members.list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    store.members.list.push(member);
+    store.members.list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
     return member;
   }
 
@@ -1585,7 +1612,7 @@ let btnEditWinnerName = null;
     const exists = findMemberByName(name);
     if (exists) {
       state.selectedMemberId = exists.id;
-      state.members.selectedId = exists.id;
+      store.members.selectedId = exists.id;
       renderMembers();
       saveStore();
       alert("이미 등록된 회원입니다.");
@@ -1594,13 +1621,15 @@ let btnEditWinnerName = null;
 
     pushHistory();
     const member = createMember(name);
-    state.members.list.push(member);
-    state.members.list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
+    store.members.list.push(member);
+    store.members.list.sort((a, b) => a.name.localeCompare(b.name, "ko"));
     state.selectedMemberId = member.id;
-    state.members.selectedId = member.id;
+    store.members.selectedId = member.id;
 
     if (memberNameInput) memberNameInput.value = "";
+    if (memberSearchInput) memberSearchInput.value = "";
 
+    state.memberSearchKeyword = "";
     renderMembers();
     saveStore();
   }
@@ -1633,7 +1662,7 @@ let btnEditWinnerName = null;
       return;
     }
 
-    const duplicated = state.members.list.find(
+    const duplicated = store.members.list.find(
       (m) => m.id !== member.id && String(m.name || "").trim().toLowerCase() === trimmed.toLowerCase()
     );
     if (duplicated) {
@@ -1646,13 +1675,28 @@ let btnEditWinnerName = null;
     const oldName = member.name;
     member.name = trimmed;
 
+    store.members.list.forEach((m) => {
+      m.winLogs.forEach((log) => {
+        if (log.who === oldName) log.who = trimmed;
+      });
+    });
+
+    Object.values(store.boards).forEach((boardObj) => {
+      const logs = boardObj?.state?.logs;
+      if (Array.isArray(logs)) {
+        logs.forEach((log) => {
+          if (log.who === oldName) log.who = trimmed;
+        });
+      }
+    });
+
     state.logs.forEach((log) => {
       if (log.who === oldName) log.who = trimmed;
     });
 
-    member.winLogs.forEach((log) => {
-      log.who = trimmed;
-    });
+    if (drawNicknameInput?.value?.trim() === oldName) {
+      drawNicknameInput.value = trimmed;
+    }
 
     renderAll();
     saveStore();
@@ -1669,9 +1713,9 @@ let btnEditWinnerName = null;
 
     pushHistory();
 
-    state.members.list = state.members.list.filter((m) => m.id !== member.id);
+    store.members.list = store.members.list.filter((m) => m.id !== member.id);
     state.selectedMemberId = null;
-    state.members.selectedId = null;
+    store.members.selectedId = null;
 
     renderMembers();
     saveStore();
@@ -1698,7 +1742,7 @@ let btnEditWinnerName = null;
     }
 
     state.selectedMemberId = member.id;
-    state.members.selectedId = member.id;
+    store.members.selectedId = member.id;
   }
 
   function addWinLogToMember(memberName, log) {
@@ -1723,8 +1767,38 @@ let btnEditWinnerName = null;
     }
 
     state.selectedMemberId = member.id;
-    state.members.selectedId = member.id;
+    store.members.selectedId = member.id;
   }
+
+  function moveWinLogToAnotherMember(oldName, newName, targetTs, logData) {
+  const oldMember = findMemberByName(oldName);
+  if (oldMember) {
+    oldMember.winLogs = oldMember.winLogs.filter((log) => log.ts !== targetTs);
+  }
+
+  const newMember = ensureMemberByName(newName);
+  if (!newMember) return;
+
+  newMember.winLogs.unshift({
+    id: uid(),
+    prizeName: logData.displayPrizeName || logData.prizeName || "",
+    prizeId: logData.displayTierText || logData.prizeId || "",
+    ticketNumber: logData.ticketNumber,
+    resultNumber: logData.resultNumber,
+    who: newName,
+    hasLastOne: !!logData.hasLastOne,
+    isManual: !!logData.isManual,
+    time: logData.time || "",
+    ts: logData.ts || Date.now(),
+  });
+
+  if (newMember.winLogs.length > 200) {
+    newMember.winLogs = newMember.winLogs.slice(0, 200);
+  }
+
+  state.selectedMemberId = newMember.id;
+  store.members.selectedId = newMember.id;
+}
 
   function openMemberPanel() {
     if (!memberPanel) return;
@@ -1736,19 +1810,143 @@ let btnEditWinnerName = null;
     memberPanel.classList.remove("show");
   }
 
+  function runMemberSearch() {
+    state.memberSearchKeyword = String(memberSearchInput?.value || "").trim();
+    renderMembers();
+  }
+
+  function adjustSelectedMemberMileage(mode) {
+    const member = getSelectedMember();
+    if (!member) {
+      alert("회원을 먼저 선택해주세요.");
+      return;
+    }
+
+    const raw = prompt(
+      mode === "add"
+        ? "추가할 마일리지를 입력해주세요."
+        : "차감할 마일리지를 입력해주세요.",
+      "1000"
+    );
+
+    if (raw === null) return;
+
+    const amount = Math.floor(Number(raw));
+    if (!Number.isFinite(amount) || amount <= 0) {
+      alert("1 이상 숫자로 입력해주세요.");
+      return;
+    }
+
+    const reasonRaw = prompt(
+      mode === "add" ? "적립 사유를 입력해주세요." : "차감 사유를 입력해주세요.",
+      mode === "add" ? "관리자 수동 적립" : "마일리지 사용"
+    );
+
+    if (reasonRaw === null) return;
+    const reason = String(reasonRaw || "").trim() || (mode === "add" ? "관리자 수동 적립" : "마일리지 사용");
+
+    pushHistory();
+
+    if (mode === "add") {
+      member.mileage += amount;
+      member.mileageLogs.unshift({
+        id: uid(),
+        amount,
+        reason,
+        timeText: nowKoreanTimeText(),
+        ts: Date.now(),
+      });
+    } else {
+      member.mileage -= amount;
+      member.mileageLogs.unshift({
+        id: uid(),
+        amount: -amount,
+        reason,
+        timeText: nowKoreanTimeText(),
+        ts: Date.now(),
+      });
+    }
+
+    if (member.mileageLogs.length > 200) {
+      member.mileageLogs = member.mileageLogs.slice(0, 200);
+    }
+
+    renderMembers();
+    saveStore();
+  }
+
+  function addManualWinToSelectedMember() {
+    const member = getSelectedMember();
+    if (!member) {
+      alert("회원을 먼저 선택해주세요.");
+      return;
+    }
+
+    const prizeId = prompt("등급/구분을 입력해주세요.", "수동기록");
+    if (prizeId === null) return;
+
+    const prizeName = prompt("상품명 또는 기록명을 입력해주세요.", "");
+    if (prizeName === null) return;
+
+    const trimmedPrizeName = String(prizeName || "").trim();
+    if (!trimmedPrizeName) {
+      alert("상품명을 입력해야 합니다.");
+      return;
+    }
+
+    const ticketNumberRaw = prompt("종이 번호가 있으면 입력해주세요. 없으면 비워도 됩니다.", "");
+    if (ticketNumberRaw === null) return;
+    const resultNumberRaw = prompt("결과 번호가 있으면 입력해주세요. 없으면 비워도 됩니다.", "");
+    if (resultNumberRaw === null) return;
+
+    pushHistory();
+
+    member.winLogs.unshift({
+      id: uid(),
+      prizeName: trimmedPrizeName,
+      prizeId: String(prizeId || "").trim() || "수동기록",
+      ticketNumber: ticketNumberRaw ? Number(ticketNumberRaw) || null : null,
+      resultNumber: resultNumberRaw ? Number(resultNumberRaw) || null : null,
+      who: member.name,
+      hasLastOne: false,
+      isManual: true,
+      time: nowKoreanTimeText(),
+      ts: Date.now(),
+    });
+
+    if (member.winLogs.length > 200) {
+      member.winLogs = member.winLogs.slice(0, 200);
+    }
+
+    renderMembers();
+    saveStore();
+  }
+
   function renderMembers() {
     if (!memberList) return;
     memberList.innerHTML = "";
 
-    const members = state.members.list.slice().sort((a, b) => {
-      if (b.mileage !== a.mileage) return b.mileage - a.mileage;
-      return a.name.localeCompare(b.name, "ko");
-    });
+    const keyword = String(state.memberSearchKeyword || "").trim().toLowerCase();
+
+    const members = store.members.list
+      .slice()
+      .filter((member) => {
+        if (!keyword) return true;
+        return String(member.name || "").toLowerCase().includes(keyword);
+      })
+      .sort((a, b) => {
+        if (b.mileage !== a.mileage) return b.mileage - a.mileage;
+        return a.name.localeCompare(b.name, "ko");
+      });
+
+    if (memberSearchInput && memberSearchInput.value !== (state.memberSearchKeyword || "")) {
+      memberSearchInput.value = state.memberSearchKeyword || "";
+    }
 
     if (!members.length) {
       const empty = document.createElement("div");
       empty.className = "member-detail-empty";
-      empty.textContent = "등록된 회원이 없습니다.";
+      empty.textContent = keyword ? "검색 결과가 없습니다." : "등록된 회원이 없습니다.";
       memberList.appendChild(empty);
     } else {
       members.forEach((member) => {
@@ -1813,8 +2011,10 @@ let btnEditWinnerName = null;
         selected.mileageLogs.forEach((log) => {
           const item = document.createElement("div");
           item.className = "member-log-item";
+
+          const signText = Number(log.amount) >= 0 ? "+" : "";
           item.innerHTML = `
-            <div class="member-log-main">+${formatWon(log.amount)} · ${log.reason}</div>
+            <div class="member-log-main">${signText}${formatWon(log.amount)} · ${log.reason}</div>
             <div class="member-log-sub">
               ${log.timeText}
               ${log.ticketNumber ? ` · 종이 ${log.ticketNumber}` : ""}
@@ -1843,7 +2043,7 @@ let btnEditWinnerName = null;
               ${log.time || ""}
               ${log.ticketNumber ? ` · 종이 ${log.ticketNumber}` : ""}
               ${log.resultNumber ? ` · 번호 ${log.resultNumber}` : ""}
-              ${log.isManual ? " · 수동처리" : ""}
+              ${log.isManual ? " · 수동기록" : ""}
             </div>
           `;
           memberWinLogList.appendChild(item);
@@ -1853,37 +2053,6 @@ let btnEditWinnerName = null;
   }
 
   function renderAll() {
-    renderBoardState();
-    renderPrizes();
-    renderAdminPrizeList();
-    renderWinList();
-    renderQueue();
-    renderProgress();
-    renderControlState();
-    rebuildBoardSelect();
-    applyBoardVisual();
-    applySoundSettings();
-
-    if (kujiTitleText) kujiTitleText.textContent = state.settings.kujiTitle;
-    if (kujiTitleInput) kujiTitleInput.value = state.settings.kujiTitle;
-    if (totalTicketsInput) totalTicketsInput.value = String(state.settings.totalTickets);
-
-    if (priceText) priceText.textContent = state.settings.priceText;
-    if (accountText) accountText.textContent = state.settings.accountText;
-    if (priceInput) priceInput.value = state.settings.priceText || "";
-
-    if (lastOneNameInput) lastOneNameInput.value = state.settings.lastOnePrize?.name || "";
-    if (lastOneDescInput) lastOneDescInput.value = state.settings.lastOnePrize?.desc || "";
-
-    if (state.editingPrizeId) {
-      const editingPrize = getEditingPrize();
-      if (!editingPrize) closePrizeEditSection();
-    } else {
-      if (editPrizeSection) editPrizeSection.style.display = "none";
-    }
-  }
-
-    function renderAll() {
     renderBoardState();
     renderPrizes();
     renderAdminPrizeList();
@@ -1915,99 +2084,473 @@ let btnEditWinnerName = null;
     }
   }
 
+  function injectMemberUi() {
+    if (memberUiInjected) return;
+    memberUiInjected = true;
+
+    if (!$("#member-ui-style")) {
+      const style = document.createElement("style");
+      style.id = "member-ui-style";
+      style.textContent = `
+        .member-btn{
+          border: 1px solid rgba(255,255,255,.14);
+          background: rgba(0,0,0,.35);
+          color: #fff;
+          padding: 10px 12px;
+          border-radius: 12px;
+          cursor:pointer;
+          font-weight: 800;
+          margin-right: 10px;
+        }
+        .member-btn:hover{
+          background: rgba(0,0,0,.45);
+        }
+        .member-panel{
+          position: fixed;
+          top: 14px;
+          right: 14px;
+          bottom: 14px;
+          width: min(540px, calc(100vw - 28px));
+          border-radius: 18px;
+          border: 1px solid rgba(255,255,255,.14);
+          background: rgba(10,12,18,.96);
+          box-shadow: 0 24px 70px rgba(0,0,0,.55);
+          overflow: hidden;
+          display: none;
+          z-index: 10001;
+        }
+        .member-panel.show{
+          display:block;
+        }
+        .member-head{
+          display:flex;
+          justify-content:space-between;
+          align-items:center;
+          padding: 14px;
+          border-bottom: 1px solid rgba(255,255,255,.12);
+          background: rgba(0,0,0,.28);
+        }
+        .member-title{
+          font-weight: 950;
+          font-size: 18px;
+        }
+        .member-close{
+          border: 1px solid rgba(255,255,255,.14);
+          background: transparent;
+          color: #fff;
+          padding: 8px 10px;
+          border-radius: 12px;
+          cursor:pointer;
+        }
+        .member-body{
+          height: calc(100% - 62px);
+          overflow-y: auto;
+          padding: 14px;
+          display:flex;
+          flex-direction:column;
+          gap: 14px;
+        }
+        .member-section{
+          border: 1px solid rgba(255,255,255,.08);
+          border-radius: 16px;
+          padding: 14px;
+          background: rgba(255,255,255,.03);
+        }
+        .member-section-title{
+          font-weight: 900;
+          font-size: 14px;
+          margin-bottom: 12px;
+          color: #ffd54d;
+        }
+        .member-col{
+          display:flex;
+          flex-direction:column;
+          gap: 12px;
+        }
+        .member-action-grid{
+          display:grid;
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+          gap: 10px;
+        }
+        .member-search-row{
+          display:grid;
+          grid-template-columns: 1fr auto;
+          gap: 8px;
+        }
+        .member-list{
+          display:flex;
+          flex-direction:column;
+          gap: 10px;
+        }
+        .member-card{
+          border: 1px solid rgba(255,255,255,.12);
+          border-radius: 14px;
+          padding: 12px;
+          background: rgba(0,0,0,.22);
+          display:grid;
+          grid-template-columns: 1fr auto;
+          gap: 10px;
+          align-items:center;
+          cursor:pointer;
+          transition: background .15s ease, border-color .15s ease, transform .15s ease;
+        }
+        .member-card:hover{
+          background: rgba(255,255,255,.06);
+          transform: translateY(-1px);
+        }
+        .member-card.active{
+          border-color: rgba(255,213,77,.55);
+          box-shadow: 0 0 0 1px rgba(255,213,77,.14) inset;
+        }
+        .member-card-main{
+          min-width:0;
+        }
+        .member-card-name{
+          font-weight: 900;
+          white-space: nowrap;
+          overflow: hidden;
+          text-overflow: ellipsis;
+        }
+        .member-card-sub{
+          margin-top: 4px;
+          font-size: 12px;
+          color: rgba(255,255,255,.68);
+        }
+        .member-card-mileage{
+          font-weight: 900;
+          color: #ffd84a;
+          white-space: nowrap;
+        }
+        .member-detail-empty{
+          color: rgba(255,255,255,.58);
+          font-size: 13px;
+        }
+        .member-detail{
+          display:flex;
+          flex-direction:column;
+          gap: 14px;
+        }
+        .member-detail-top{
+          display:flex;
+          justify-content:space-between;
+          gap: 12px;
+          align-items:flex-start;
+        }
+        .member-detail-name{
+          font-size: 20px;
+          font-weight: 950;
+        }
+        .member-detail-sub{
+          margin-top: 6px;
+          font-size: 12px;
+          color: rgba(255,255,255,.68);
+        }
+        .member-mileage-box{
+          min-width: 130px;
+          border: 1px solid rgba(255,213,77,.28);
+          background: rgba(255,213,77,.08);
+          border-radius: 14px;
+          padding: 10px 12px;
+          text-align:right;
+        }
+        .member-mileage-label{
+          font-size: 11px;
+          color: rgba(255,255,255,.72);
+        }
+        .member-mileage-value{
+          margin-top: 4px;
+          font-size: 22px;
+          font-weight: 950;
+          color: #ffd84a;
+        }
+        .member-log-wrap{
+          display:flex;
+          flex-direction:column;
+          gap: 8px;
+        }
+        .member-log-title{
+          font-weight: 900;
+          font-size: 13px;
+        }
+        .member-log-list{
+          display:flex;
+          flex-direction:column;
+          gap: 8px;
+          max-height: 220px;
+          overflow-y: auto;
+        }
+        .member-log-item{
+          border: 1px solid rgba(255,255,255,.10);
+          background: rgba(0,0,0,.18);
+          border-radius: 12px;
+          padding: 10px;
+        }
+        .member-log-main{
+          font-size: 13px;
+          font-weight: 700;
+        }
+        .member-log-sub{
+          margin-top: 4px;
+          font-size: 11px;
+          color: rgba(255,255,255,.68);
+        }
+        .btn.warn{
+          border-color: rgba(255,140,80,.55);
+          background: rgba(255,140,80,.14);
+        }
+        .btn.warn:hover{
+          background: rgba(255,140,80,.22);
+        }
+        @media (max-width: 640px){
+          .member-panel{
+            width: calc(100vw - 20px);
+            top: 10px;
+            right: 10px;
+            bottom: 10px;
+          }
+          .member-action-grid{
+            grid-template-columns: 1fr;
+          }
+          .member-detail-top{
+            flex-direction:column;
+          }
+          .member-search-row{
+            grid-template-columns: 1fr;
+          }
+        }
+      `;
+      document.head.appendChild(style);
+    }
+
+    const topbarRight = $(".topbar-right");
+    if (topbarRight && !$("#btnToggleMember")) {
+      const btn = document.createElement("button");
+      btn.type = "button";
+      btn.id = "btnToggleMember";
+      btn.className = "member-btn";
+      btn.textContent = "회원 패널";
+
+      const soundControl = $(".sound-control", topbarRight);
+      const modeBtn = $("#btnToggleMode", topbarRight);
+
+      if (soundControl && modeBtn) {
+        topbarRight.insertBefore(btn, modeBtn);
+      } else {
+        topbarRight.appendChild(btn);
+      }
+    }
+
+    if (!$("#memberPanel")) {
+      const panel = document.createElement("aside");
+      panel.className = "member-panel";
+      panel.id = "memberPanel";
+      panel.innerHTML = `
+        <div class="member-head">
+          <div class="member-title">회원 패널</div>
+          <button class="member-close" id="btnCloseMember" type="button">닫기</button>
+        </div>
+
+        <div class="member-body">
+          <div class="member-section">
+            <div class="member-section-title">회원 등록 / 선택</div>
+
+            <div class="member-col">
+              <div class="field">
+                <label for="memberNameInput">닉네임</label>
+                <input
+                  class="input"
+                  id="memberNameInput"
+                  type="text"
+                  placeholder="예: 오지상덕후1"
+                />
+              </div>
+
+              <div class="member-action-grid">
+                <button class="btn ok" id="btnAddMember" type="button">회원 등록</button>
+                <button class="btn" id="btnUseMemberForDraw" type="button">닉네임 칸에 넣기</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="member-section">
+            <div class="member-section-title">회원 검색 / 목록</div>
+
+            <div class="member-search-row">
+              <input
+                class="input"
+                id="memberSearchInput"
+                type="text"
+                placeholder="닉네임 검색"
+              />
+              <button class="btn" id="btnMemberSearch" type="button">검색</button>
+            </div>
+
+            <div class="member-list" id="memberList" style="margin-top:10px;"></div>
+          </div>
+
+          <div class="member-section">
+            <div class="member-section-title">회원 상세</div>
+            <div class="member-detail-empty" id="memberDetailEmpty">회원을 선택해주세요.</div>
+
+            <div class="member-detail" id="memberDetail" style="display:none;">
+              <div class="member-detail-top">
+                <div>
+                  <div class="member-detail-name" id="memberDetailName">-</div>
+                  <div class="member-detail-sub" id="memberDetailSub">-</div>
+                </div>
+
+                <div class="member-mileage-box">
+                  <div class="member-mileage-label">총 마일리지</div>
+                  <div class="member-mileage-value" id="memberDetailMileage">0원</div>
+                </div>
+              </div>
+
+              <div class="member-action-grid">
+                <button class="btn primary" id="btnRenameMember" type="button">닉네임 수정</button>
+                <button class="btn ok" id="btnMileageAdd" type="button">마일리지 추가</button>
+                <button class="btn warn" id="btnMileageUse" type="button">마일리지 차감</button>
+                <button class="btn" id="btnManualWinAdd" type="button">기존 당첨기록 추가</button>
+                <button class="btn danger" id="btnDeleteMember" type="button">회원 삭제</button>
+              </div>
+
+              <div class="member-log-wrap">
+                <div class="member-log-title">마일리지 적립 내역</div>
+                <div class="member-log-list" id="memberMileageLogList"></div>
+              </div>
+
+              <div class="member-log-wrap">
+                <div class="member-log-title">당첨 내역</div>
+                <div class="member-log-list" id="memberWinLogList"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+      `;
+
+      document.body.appendChild(panel);
+    }
+
+    syncMemberDomRefs();
+  }
+
+  function syncMemberDomRefs() {
+    btnToggleMember = $("#btnToggleMember");
+    memberPanel = $("#memberPanel");
+    btnCloseMember = $("#btnCloseMember");
+    memberNameInput = $("#memberNameInput");
+    btnAddMember = $("#btnAddMember");
+    btnUseMemberForDraw = $("#btnUseMemberForDraw");
+    memberList = $("#memberList");
+
+    memberDetailEmpty = $("#memberDetailEmpty");
+    memberDetail = $("#memberDetail");
+    memberDetailName = $("#memberDetailName");
+    memberDetailSub = $("#memberDetailSub");
+    memberDetailMileage = $("#memberDetailMileage");
+    btnRenameMember = $("#btnRenameMember");
+    btnDeleteMember = $("#btnDeleteMember");
+    memberMileageLogList = $("#memberMileageLogList");
+    memberWinLogList = $("#memberWinLogList");
+    memberSearchInput = $("#memberSearchInput");
+    btnMemberSearch = $("#btnMemberSearch");
+    btnMileageAdd = $("#btnMileageAdd");
+    btnMileageUse = $("#btnMileageUse");
+    btnManualWinAdd = $("#btnManualWinAdd");
+  }
+
   function injectExtraUi() {
-  if (extraUiInjected) return;
-  extraUiInjected = true;
+    if (extraUiInjected) return;
+    extraUiInjected = true;
 
-  const style = document.createElement("style");
-  style.textContent = `
-    .result-tier-badge{
-      order: 0;
-      display: inline-flex;
-      align-items: center;
-      justify-content: center;
-      margin: 0 0 14px;
-      padding: 8px 16px;
-      border-radius: 999px;
-      font-size: 18px;
-      font-weight: 900;
-      color: #fff6cf;
-      background: rgba(255,255,255,.08);
-      border: 1px solid rgba(255,255,255,.18);
-      box-shadow: 0 6px 18px rgba(0,0,0,.18);
-      text-shadow: 0 2px 8px rgba(0,0,0,.45);
-    }
-    .winrow{
-      cursor: pointer;
-    }
-    .winrow:hover{
-      filter: brightness(1.05);
-    }
-    .admin-prize-manual{
-      border: 1px solid rgba(255,195,77,.55);
-      background: rgba(255,195,77,.12);
-      color: var(--text);
-      padding: 10px 12px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 900;
-      font-size: 11px;
-      white-space: nowrap;
-    }
-    .admin-prize-manual:hover{
-      background: rgba(255,195,77,.22);
-    }
-    .modal-header{
-      position: relative;
-    }
-    .modal-edit-top-btn{
-      position: absolute;
-      left: 14px;
-      top: 50%;
-      transform: translateY(-50%);
-      border: 1px solid rgba(122,112,255,.55);
-      background: rgba(122,112,255,.14);
-      color: #fff;
-      padding: 8px 12px;
-      border-radius: 12px;
-      cursor: pointer;
-      font-weight: 900;
-      font-size: 13px;
-      line-height: 1;
-      z-index: 3;
-    }
-    .modal-edit-top-btn:hover{
-      background: rgba(122,112,255,.22);
-    }
-    .modal-edit-top-btn.is-hidden{
-      display: none;
-    }
-  `;
-  document.head.appendChild(style);
+    const style = document.createElement("style");
+    style.textContent = `
+      .result-tier-badge{
+        order: 0;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        margin: 0 0 14px;
+        padding: 8px 16px;
+        border-radius: 999px;
+        font-size: 18px;
+        font-weight: 900;
+        color: #fff6cf;
+        background: rgba(255,255,255,.08);
+        border: 1px solid rgba(255,255,255,.18);
+        box-shadow: 0 6px 18px rgba(0,0,0,.18);
+        text-shadow: 0 2px 8px rgba(0,0,0,.45);
+      }
+      .winrow{
+        cursor: pointer;
+      }
+      .winrow:hover{
+        filter: brightness(1.05);
+      }
+      .admin-prize-manual{
+        border: 1px solid rgba(255,195,77,.55);
+        background: rgba(255,195,77,.12);
+        color: var(--text);
+        padding: 10px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 900;
+        font-size: 11px;
+        white-space: nowrap;
+      }
+      .admin-prize-manual:hover{
+        background: rgba(255,195,77,.22);
+      }
+      .modal-header{
+        position: relative;
+      }
+      .modal-edit-top-btn{
+        position: absolute;
+        left: 14px;
+        top: 50%;
+        transform: translateY(-50%);
+        border: 1px solid rgba(122,112,255,.55);
+        background: rgba(122,112,255,.14);
+        color: #fff;
+        padding: 8px 12px;
+        border-radius: 12px;
+        cursor: pointer;
+        font-weight: 900;
+        font-size: 13px;
+        line-height: 1;
+        z-index: 3;
+      }
+      .modal-edit-top-btn:hover{
+        background: rgba(122,112,255,.22);
+      }
+      .modal-edit-top-btn.is-hidden{
+        display: none;
+      }
+    `;
+    document.head.appendChild(style);
 
-  if (drawModal && !drawModal.querySelector(".modal-flash")) {
-    const flash = document.createElement("div");
-    flash.className = "modal-flash";
-    const modalBody = drawModal.querySelector(".modal-body");
-    if (modalBody) modalBody.appendChild(flash);
+    if (drawModal && !drawModal.querySelector(".modal-flash")) {
+      const flash = document.createElement("div");
+      flash.className = "modal-flash";
+      const modalBody = drawModal.querySelector(".modal-body");
+      if (modalBody) modalBody.appendChild(flash);
+    }
+
+    if (modalHeader && !$("#btnEditWinnerName", modalHeader)) {
+      btnEditWinnerName = document.createElement("button");
+      btnEditWinnerName.type = "button";
+      btnEditWinnerName.id = "btnEditWinnerName";
+      btnEditWinnerName.className = "modal-edit-top-btn is-hidden";
+      btnEditWinnerName.textContent = "닉네임 수정";
+
+      btnEditWinnerName.addEventListener("click", () => {
+        editCurrentViewingWinnerName();
+      });
+
+      modalHeader.appendChild(btnEditWinnerName);
+    } else {
+      btnEditWinnerName = $("#btnEditWinnerName", modalHeader);
+    }
   }
-
-  if (modalHeader && !$("#btnEditWinnerName", modalHeader)) {
-    btnEditWinnerName = document.createElement("button");
-    btnEditWinnerName.type = "button";
-    btnEditWinnerName.id = "btnEditWinnerName";
-    btnEditWinnerName.className = "modal-edit-top-btn is-hidden";
-    btnEditWinnerName.textContent = "닉네임 수정";
-
-    btnEditWinnerName.addEventListener("click", () => {
-      editCurrentViewingWinnerName();
-    });
-
-    modalHeader.appendChild(btnEditWinnerName);
-  } else {
-    btnEditWinnerName = $("#btnEditWinnerName", modalHeader);
-  }
-}
 
   function ensureResultTierBadge() {
     if (!modalResultPanel) return null;
@@ -2047,7 +2590,7 @@ let btnEditWinnerName = null;
     state.used[String(tx.ticketNumber)] = true;
     state.selectedNumbers = state.selectedNumbers.filter((x) => x !== tx.ticketNumber);
 
-        state.logs.push(tx.log);
+    state.logs.push(tx.log);
     if (state.logs.length > 100) state.logs = state.logs.slice(-100);
 
     addWinLogToMember(tx.log.who, tx.log);
@@ -2055,7 +2598,7 @@ let btnEditWinnerName = null;
     if (tx.prize.id === "OJI") {
       addMileageToMember(
         tx.log.who,
-        1000,
+        CONFIG.defaultMileagePerOji,
         "오지상 기본상 자동 적립",
         {
           ticketNumber: tx.ticketNumber,
@@ -2252,11 +2795,11 @@ let btnEditWinnerName = null;
     }
   }
 
- function findLogByTs(ts) {
-  return state.logs.find((log) => log.ts === ts) || null;
-}
+  function findLogByTs(ts) {
+    return state.logs.find((log) => log.ts === ts) || null;
+  }
 
-function editCurrentViewingWinnerName() {
+  function editCurrentViewingWinnerName() {
   if (!currentViewingLogTs) {
     alert("수정할 당첨 기록이 없습니다.");
     return;
@@ -2268,7 +2811,9 @@ function editCurrentViewingWinnerName() {
     return;
   }
 
-  const nextName = prompt("새 닉네임을 입력해주세요.", targetLog.who || "");
+  const oldName = String(targetLog.who || "").trim();
+
+  const nextName = prompt("새 닉네임을 입력해주세요.", oldName);
   if (nextName === null) return;
 
   const trimmed = String(nextName || "").trim();
@@ -2277,8 +2822,18 @@ function editCurrentViewingWinnerName() {
     return;
   }
 
+  if (trimmed === oldName) return;
+
   pushHistory();
+
+  // 메인 로그 닉네임 변경
   targetLog.who = trimmed;
+
+  // 회원 당첨기록도 기존 회원 -> 새 회원으로 이동
+  moveWinLogToAnotherMember(oldName, trimmed, targetLog.ts, {
+    ...targetLog,
+    who: trimmed,
+  });
 
   renderAll();
   saveStore();
@@ -2300,34 +2855,34 @@ function editCurrentViewingWinnerName() {
 }
 
   function showWinnerEditButton(show) {
-  if (!btnEditWinnerName) return;
-  btnEditWinnerName.classList.toggle("is-hidden", !show);
-}
+    if (!btnEditWinnerName) return;
+    btnEditWinnerName.classList.toggle("is-hidden", !show);
+  }
 
   function openWinLogResult(log) {
-  if (!log) return;
+    if (!log) return;
 
-  openModal();
+    openModal();
 
-  currentViewingLogTs = log.ts;
-  showWinnerEditButton(true);
+    currentViewingLogTs = log.ts;
+    showWinnerEditButton(true);
 
-  fillResultPanel(
-    {
-      prizeName: log.displayPrizeName || log.prizeName || "",
-      tierText: log.displayTierText || log.prizeId || "",
-      ticketNumber: log.ticketNumber,
-      who: log.who,
-      prizeImg: log.prizeImg || "",
-      tier: log.tier || 5,
-      hasLastOne: !!log.hasLastOne,
-    },
-    { withEffects: false }
-  );
+    fillResultPanel(
+      {
+        prizeName: log.displayPrizeName || log.prizeName || "",
+        tierText: log.displayTierText || log.prizeId || "",
+        ticketNumber: log.ticketNumber,
+        who: log.who,
+        prizeImg: log.prizeImg || "",
+        tier: log.tier || 5,
+        hasLastOne: !!log.hasLastOne,
+      },
+      { withEffects: false }
+    );
 
-  if (modalTitle) modalTitle.textContent = "당첨 결과 보기";
-  if (modalSub) modalSub.textContent = log.isManual ? "관리자 수동 처리 기록" : "";
-}
+    if (modalTitle) modalTitle.textContent = "당첨 결과 보기";
+    if (modalSub) modalSub.textContent = log.isManual ? "관리자 수동 처리 기록" : "";
+  }
 
   function resetBoardOnly() {
     if (!confirm("현재 쿠지판의 뽑기 진행 상황만 초기화할까요?\n상품 목록은 유지됩니다.")) return;
@@ -2505,7 +3060,7 @@ function editCurrentViewingWinnerName() {
     pendingDrawCommit = null;
     pendingDrawCommitted = false;
     currentViewingLogTs = null;
-showWinnerEditButton(false);
+    showWinnerEditButton(false);
 
     const flash = getModalFlashEl();
     if (flash) flash.classList.remove("on");
@@ -2759,7 +3314,7 @@ showWinnerEditButton(false);
     }, 9000);
   }
 
-    function resolveDrawerName() {
+  function resolveDrawerName() {
     const manualName = (drawNicknameInput?.value || "").trim();
     if (manualName) {
       ensureMemberByName(manualName);
@@ -2782,7 +3337,7 @@ showWinnerEditButton(false);
   }
 
   async function startDraw(ticketNumber) {
-    const beforeSnap = JSON.stringify(exportState());
+    const beforeSnap = JSON.stringify(exportSnapshot());
 
     return new Promise((resolve) => {
       try {
@@ -2870,7 +3425,7 @@ showWinnerEditButton(false);
         console.error("[KUJI] startDraw error:", e);
 
         try {
-          importState(JSON.parse(beforeSnap));
+          importSnapshot(JSON.parse(beforeSnap));
           buildBoard(state.settings.totalTickets);
           renderAll();
           saveStore();
@@ -2929,7 +3484,7 @@ showWinnerEditButton(false);
       alert("되돌릴 내용이 없습니다.");
       return;
     }
-    importState(JSON.parse(snap));
+    importSnapshot(JSON.parse(snap));
     buildBoard(state.settings.totalTickets);
     renderAll();
     saveStore();
@@ -3112,7 +3667,7 @@ showWinnerEditButton(false);
     store.boards[newBoard.meta.id] = newBoard;
     store.currentBoardId = newBoard.meta.id;
 
-    importState(newBoard.state);
+    importBoardState(newBoard.state);
     rebuildAssignments();
     rebuildBoardSelect();
     applyBoardVisual();
@@ -3142,7 +3697,7 @@ showWinnerEditButton(false);
     if (paperUrl) target.meta.paperImage = paperUrl;
 
     store.currentBoardId = selectedId;
-    importState(target.state);
+    importBoardState(target.state);
     rebuildBoardSelect();
     applyBoardVisual();
     buildBoard(state.settings.totalTickets);
@@ -3173,7 +3728,7 @@ showWinnerEditButton(false);
 
     if (store.currentBoardId === selectedId) {
       store.currentBoardId = Object.keys(store.boards)[0];
-      importState(store.boards[store.currentBoardId].state);
+      importBoardState(store.boards[store.currentBoardId].state);
     }
 
     rebuildBoardSelect();
@@ -3231,6 +3786,10 @@ showWinnerEditButton(false);
         closePreviewModal();
         return;
       }
+      if (memberPanel?.classList.contains("show")) {
+        closeMemberPanel();
+        return;
+      }
       if (drawModal?.classList.contains("show")) closeModal();
     }
   });
@@ -3255,31 +3814,37 @@ showWinnerEditButton(false);
 
   btnAutoPeel?.addEventListener("click", startAutoPeel);
 
-    btnToggleMember?.addEventListener("click", () => {
-    openMemberPanel();
-  });
-
-  btnCloseMember?.addEventListener("click", () => {
-    closeMemberPanel();
-  });
-
-  btnAddMember?.addEventListener("click", addMemberFromInput);
-
-  memberNameInput?.addEventListener("keydown", (e) => {
-    if (e.key === "Enter") addMemberFromInput();
-  });
-
-  btnUseMemberForDraw?.addEventListener("click", useSelectedMemberForDraw);
-
-  btnRenameMember?.addEventListener("click", renameSelectedMember);
-  btnDeleteMember?.addEventListener("click", deleteSelectedMember);
-
   loadStore();
   rebuildAssignmentsIfNeeded();
   rebuildBoardSelect();
   applyBoardVisual();
   injectExtraUi();
+  injectMemberUi();
   injectBoardResetButton();
+  syncMemberDomRefs();
+
+  btnToggleMember?.addEventListener("click", openMemberPanel);
+  btnCloseMember?.addEventListener("click", closeMemberPanel);
+  btnAddMember?.addEventListener("click", addMemberFromInput);
+  memberNameInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") addMemberFromInput();
+  });
+  btnUseMemberForDraw?.addEventListener("click", useSelectedMemberForDraw);
+
+  btnRenameMember?.addEventListener("click", renameSelectedMember);
+  btnDeleteMember?.addEventListener("click", deleteSelectedMember);
+  btnMileageAdd?.addEventListener("click", () => adjustSelectedMemberMileage("add"));
+  btnMileageUse?.addEventListener("click", () => adjustSelectedMemberMileage("use"));
+  btnManualWinAdd?.addEventListener("click", addManualWinToSelectedMember);
+  btnMemberSearch?.addEventListener("click", runMemberSearch);
+  memberSearchInput?.addEventListener("keydown", (e) => {
+    if (e.key === "Enter") runMemberSearch();
+  });
+  memberSearchInput?.addEventListener("input", () => {
+    state.memberSearchKeyword = String(memberSearchInput.value || "").trim();
+    renderMembers();
+  });
+
   setMode(state.mode || "broadcast");
   buildBoard(state.settings.totalTickets);
   renderAll();
@@ -3291,5 +3856,6 @@ showWinnerEditButton(false);
     rebuildAssignments,
     startDraw,
     manualAwardPrize,
+    addMileageToMember,
   };
 })();

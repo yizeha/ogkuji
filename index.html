@@ -250,7 +250,7 @@
             </div>
 
             <div class="field">
-              <label for="prizeImgUrlInput">이미지 URL (선택)</label>
+              <label for="prizeImgUrlInput">이미지 URL</label>
               <input
                 class="input"
                 id="prizeImgUrlInput"
@@ -516,8 +516,19 @@
     </div>
 
     <div class="member-section">
-      <div class="member-section-title">회원 목록</div>
-      <div class="member-list" id="memberList"></div>
+      <div class="member-section-title">회원 검색 / 목록</div>
+
+      <div class="member-search-row">
+        <input
+          class="input"
+          id="memberSearchInput"
+          type="text"
+          placeholder="닉네임 검색"
+        />
+        <button class="btn" id="btnMemberSearch" type="button">검색</button>
+      </div>
+
+      <div class="member-list" id="memberList" style="margin-top:10px;"></div>
     </div>
 
     <div class="member-section">
@@ -539,6 +550,8 @@
 
         <div class="member-action-grid">
           <button class="btn primary" id="btnRenameMember" type="button">닉네임 수정</button>
+          <button class="btn ok" id="btnMileageAdd" type="button">마일리지 추가</button>
+          <button class="btn warn" id="btnMileageUse" type="button">마일리지 차감</button>
           <button class="btn danger" id="btnDeleteMember" type="button">회원 삭제</button>
         </div>
 
@@ -555,6 +568,7 @@
     </div>
   </div>
 </aside>
+
     <audio id="fanfare" src="./assets/fanfare.mp3" preload="auto"></audio>
     <audio id="peelSound" src="./assets/peel.mp3" preload="auto"></audio>
     <audio id="lastOneSound" src="./assets/lastone.mp3" preload="auto"></audio>
