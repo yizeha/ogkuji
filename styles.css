@@ -2099,11 +2099,14 @@ label{
 
 /* confetti */
 .confetti-layer{
-  position:absolute;
-  inset:0;
-  pointer-events:none;
-  overflow:hidden;
-  z-index: 6;
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 50;
+}
+.confetti-layer .confetti{
+  will-change: transform, opacity;
 }
 .confetti{
   position:absolute;
@@ -2113,6 +2116,7 @@ label{
   border-radius:2px;
   opacity:.95;
   animation: confettiFall linear forwards;
+  will-change: transform, opacity;
 }
 @keyframes confettiFall{
   0%{
@@ -2792,20 +2796,18 @@ label{
 ===================================== */
 
 #globalConfetti{
-  position:fixed;
-  inset:0;
-  pointer-events:none;
-  z-index:200;
-  overflow:hidden;
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+  z-index: 9999;
 }
 
 .global-confetti{
-  position:absolute;
-  width:10px;
-  height:14px;
-  opacity:.95;
-  border-radius:2px;
-  animation: globalConfettiFall linear forwards;
+  position: absolute;
+  opacity: .96;
+  border-radius: 2px;
+  will-change: transform, opacity;
 }
 
 @keyframes globalConfettiFall{
@@ -3309,4 +3311,79 @@ label{
   .member-detail-top{
     flex-direction:column;
   }
+}
+
+.result-tier-badge{
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 110px;
+  padding: 8px 18px;
+  margin-bottom: 14px;
+  border-radius: 999px;
+  font-size: 18px;
+  font-weight: 900;
+  line-height: 1;
+  color: #fff;
+  border: 1px solid rgba(255,255,255,.22);
+  background: rgba(255,255,255,.08);
+  box-shadow:
+    0 0 10px rgba(255,255,255,.08),
+    0 4px 18px rgba(0,0,0,.28);
+  backdrop-filter: blur(6px);
+  text-shadow: 0 2px 8px rgba(0,0,0,.45);
+}
+
+.modal-result-panel.tier-a .result-tier-badge{
+  background: linear-gradient(90deg, rgba(255,180,0,.95), rgba(255,220,120,.95));
+  color: #2b1a00;
+  box-shadow:
+    0 0 18px rgba(255,190,30,.30),
+    0 4px 20px rgba(0,0,0,.30);
+}
+
+.modal-result-panel.tier-b .result-tier-badge{
+  background: linear-gradient(90deg, rgba(255,70,180,.95), rgba(255,150,220,.95));
+  color: #fff;
+  box-shadow:
+    0 0 18px rgba(255,90,190,.28),
+    0 4px 20px rgba(0,0,0,.30);
+}
+
+.modal-result-panel.tier-c .result-tier-badge{
+  background: linear-gradient(90deg, rgba(90,160,255,.95), rgba(170,215,255,.95));
+  color: #06233f;
+  box-shadow:
+    0 0 18px rgba(90,160,255,.24),
+    0 4px 20px rgba(0,0,0,.30);
+}
+
+.modal-result-panel.tier-d .result-tier-badge{
+  background: linear-gradient(90deg, rgba(78,214,129,.95), rgba(180,255,205,.95));
+  color: #08311a;
+}
+
+.modal-result-panel.tier-e .result-tier-badge{
+  background: linear-gradient(90deg, rgba(230,230,230,.95), rgba(255,255,255,.95));
+  color: #222;
+}
+
+.modal-result-panel.lastone-result .result-tier-badge{
+  background: linear-gradient(
+    90deg,
+    rgba(255,120,210,.95),
+    rgba(255,210,120,.95),
+    rgba(120,180,255,.95)
+  );
+  background-size: 200% 100%;
+  color: #fff;
+  animation: tierAuroraMove 2.6s linear infinite;
+  box-shadow:
+    0 0 24px rgba(255,120,210,.28),
+    0 0 36px rgba(255,210,120,.20);
+}
+
+@keyframes tierAuroraMove{
+  0%{ background-position: 0% 50%; }
+  100%{ background-position: 200% 50%; }
 }

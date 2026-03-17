@@ -649,6 +649,7 @@ jsonImportInput: $("#jsonImportInput"),
   let currentDrawResolver = null;
   let currentViewingLogTs = null;
 let btnEditWinnerName = null;
+let isFreshReveal = false;
   
 
   function getEditingPrize() {
@@ -1571,6 +1572,9 @@ let btnEditWinnerName = null;
     stopAutoPeel();
     stopPeelSound();
 
+    const oldTierBadge = refs.modalResultPanel?.querySelector(".result-tier-badge");
+if (oldTierBadge) oldTierBadge.remove();
+
     if (refs.btnAutoPeel) {
       refs.btnAutoPeel.disabled = false;
       refs.btnAutoPeel.textContent = "자동 오픈 !";
@@ -1608,6 +1612,8 @@ let btnEditWinnerName = null;
 
     currentViewingLogTs = null;
 showWinnerEditButton(false);
+clearModalEffects();
+isFreshReveal = false;
   }
 
   function openModal() {
@@ -1640,50 +1646,203 @@ showWinnerEditButton(false);
     autoPeelRunning = false;
   }
 
-  function burstConfetti(count = 60) {
-    if (!refs.modalConfetti) return;
-    refs.modalConfetti.innerHTML = "";
+  function getModalCard() {
+  return refs.drawModal?.querySelector(".modal-card");
+}
 
-    const colors = [
-      "rgba(255,215,0,.95)",
-      "rgba(177,76,255,.95)",
-      "rgba(61,168,255,.95)",
-      "rgba(255,255,255,.88)",
-      "rgba(0,255,136,.92)",
-      "rgba(255,120,210,.95)",
-    ];
-
-    const width = refs.modalConfetti.clientWidth || 720;
-    const height = refs.modalConfetti.clientHeight || 420;
-
-    for (let i = 0; i < count; i++) {
-      const c = document.createElement("div");
-      c.className = "confetti";
-      c.style.left = `${Math.random() * width}px`;
-      c.style.top = `${-20 - Math.random() * 80}px`;
-      c.style.background = colors[Math.floor(Math.random() * colors.length)];
-      c.style.width = `${8 + Math.random() * 8}px`;
-      c.style.height = `${10 + Math.random() * 12}px`;
-
-      c.animate(
-        [
-          { transform: "translate(0px, 0px) rotate(0deg)", opacity: 1 },
-          { transform: `translate(${(Math.random() - 0.5) * 260}px, ${height + 120}px) rotate(${480 + Math.random() * 540}deg)`, opacity: 0 },
-        ],
-        {
-          duration: 900 + Math.random() * 900,
-          easing: "cubic-bezier(.18,.7,.2,1)",
-          fill: "forwards",
-        }
-      );
-
-      refs.modalConfetti.appendChild(c);
-    }
-
-    setTimeout(() => {
-      if (refs.modalConfetti) refs.modalConfetti.innerHTML = "";
-    }, 2400);
+function clearModalEffects() {
+  const modalCard = getModalCard();
+  if (modalCard) {
+    modalCard.classList.remove(
+      "fx-ultra",
+      "fx-super",
+      "fx-high",
+      "fx-mid",
+      "fx-low",
+      "fx-gold",
+      "fx-purple",
+      "fx-blue",
+      "fx-green",
+      "fx-flash",
+      "fx-shake",
+      "fx-ripple",
+      "fx-lastone-boom"
+    );
   }
+
+  const flash = refs.drawModal?.querySelector(".modal-flash");
+  if (flash) {
+    flash.classList.remove("on");
+  }
+}
+
+function triggerModalFlash() {
+  const flash = refs.drawModal?.querySelector(".modal-flash");
+  if (!flash) return;
+
+  flash.classList.remove("on");
+  void flash.offsetWidth;
+  flash.classList.add("on");
+}
+
+function runTierEffects({ tier, hasLastOne }) {
+  const modalCard = getModalCard();
+  if (!modalCard) return;
+
+  clearModalEffects();
+
+  if (hasLastOne) {
+    modalCard.classList.add("fx-ultra", "fx-lastone-boom");
+    triggerModalFlash();
+    return;
+  }
+
+  if (tier === 1) {
+    modalCard.classList.add("fx-super", "fx-flash");
+    triggerModalFlash();
+    return;
+  }
+
+  if (tier === 2) {
+    modalCard.classList.add("fx-high", "fx-shake");
+    return;
+  }
+
+  if (tier === 3) {
+    modalCard.classList.add("fx-mid");
+    return;
+  }
+
+  modalCard.classList.add("fx-low");
+}
+
+  function burstConfetti(count = 120) {
+  if (!refs.modalConfetti) return;
+  refs.modalConfetti.innerHTML = "";
+
+  const colors = [
+    "#ffd84a",
+    "#ff4fc3",
+    "#6aa8ff",
+    "#ffffff",
+    "#7bffdf",
+    "#ff9f43",
+    "#c58cff"
+  ];
+
+  const width = refs.modalConfetti.clientWidth || 720;
+  const height = refs.modalConfetti.clientHeight || 420;
+
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement("div");
+    c.className = "confetti";
+
+    const sizeW = 6 + Math.random() * 10;
+    const sizeH = 10 + Math.random() * 14;
+    const startX = Math.random() * width;
+    const startY = -60 - Math.random() * 160;
+    const driftX = (Math.random() - 0.5) * 360;
+    const rotate = 360 + Math.random() * 900;
+
+    c.style.position = "absolute";
+    c.style.left = `${startX}px`;
+    c.style.top = `${startY}px`;
+    c.style.width = `${sizeW}px`;
+    c.style.height = `${sizeH}px`;
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.borderRadius = Math.random() > 0.55 ? "2px" : "999px";
+    c.style.opacity = "0.96";
+    c.style.willChange = "transform, opacity";
+
+    c.animate(
+      [
+        {
+          transform: "translate3d(0,0,0) rotate(0deg)",
+          opacity: 1
+        },
+        {
+          transform: `translate3d(${driftX}px, ${height + 180}px, 0) rotate(${rotate}deg)`,
+          opacity: 0
+        }
+      ],
+      {
+        duration: 1800 + Math.random() * 1800,
+        easing: "cubic-bezier(.16,.72,.2,1)",
+        fill: "forwards"
+      }
+    );
+
+    refs.modalConfetti.appendChild(c);
+  }
+
+  setTimeout(() => {
+    if (refs.modalConfetti) refs.modalConfetti.innerHTML = "";
+  }, 4200);
+}
+
+function burstGlobalConfetti(count = 500) {
+  const layer = document.getElementById("globalConfetti");
+  if (!layer) return;
+
+  layer.innerHTML = "";
+
+  const colors = [
+    "#ffd84a",
+    "#ff4fc3",
+    "#6aa8ff",
+    "#ffffff",
+    "#7bffdf",
+    "#ff9f43",
+    "#c58cff"
+  ];
+
+  const width = window.innerWidth;
+  const height = window.innerHeight;
+
+  for (let i = 0; i < count; i++) {
+    const c = document.createElement("div");
+    c.className = "global-confetti";
+
+    const sizeW = 6 + Math.random() * 10;
+    const sizeH = 10 + Math.random() * 16;
+    const startX = Math.random() * width;
+    const startY = -80 - Math.random() * 260;
+    const driftX = (Math.random() - 0.5) * 520;
+    const rotate = 360 + Math.random() * 1080;
+
+    c.style.left = `${startX}px`;
+    c.style.top = `${startY}px`;
+    c.style.width = `${sizeW}px`;
+    c.style.height = `${sizeH}px`;
+    c.style.background = colors[Math.floor(Math.random() * colors.length)];
+    c.style.borderRadius = Math.random() > 0.5 ? "2px" : "999px";
+    c.style.opacity = "0.97";
+
+    c.animate(
+      [
+        {
+          transform: "translate3d(0,0,0) rotate(0deg)",
+          opacity: 1
+        },
+        {
+          transform: `translate3d(${driftX}px, ${height + 240}px, 0) rotate(${rotate}deg)`,
+          opacity: 0
+        }
+      ],
+      {
+        duration: 3800 + Math.random() * 3200,
+        easing: "cubic-bezier(.18,.7,.2,1)",
+        fill: "forwards"
+      }
+    );
+
+    layer.appendChild(c);
+  }
+
+  setTimeout(() => {
+    layer.innerHTML = "";
+  }, 5600);
+}
 
   function resolveDrawerName() {
     const manualName = String(refs.drawNicknameInput?.value || "").trim();
@@ -1743,58 +1902,87 @@ showWinnerEditButton(false);
   }
 
   function fillResultPanel(data) {
-    const { prizeName, tierText, ticketNumber, who, prizeImg, tier, hasLastOne } = data;
+  const { prizeName, tierText, ticketNumber, who, prizeImg, tier, hasLastOne } = data;
 
-    showWinnerEditButton(false);
+  showWinnerEditButton(false);
 
-    if (refs.modalTitle) refs.modalTitle.textContent = "결과 공개";
-    if (refs.modalSub) refs.modalSub.textContent = "";
+  if (refs.modalTitle) refs.modalTitle.textContent = "결과 공개";
+  if (refs.modalSub) refs.modalSub.textContent = "";
 
-    if (refs.modalRevealBig) refs.modalRevealBig.textContent = prizeName || "";
-    if (refs.modalRevealSmall) {
-      refs.modalRevealSmall.innerHTML = `
-        <div class="result-meta-line">종이 ${ticketNumber}</div>
-        <div class="result-meta-line result-who">${who || "참여자"}</div>
-      `;
-    }
+  if (refs.modalStagePeel) refs.modalStagePeel.style.display = "none";
+  if (refs.modalStageResult) refs.modalStageResult.style.display = "block";
 
-    if (refs.modalResultImg) {
-      refs.modalResultImg.src = prizeImg || CONFIG.defaultEmptyResultImage;
-      refs.modalResultImg.classList.remove("is-hidden");
-    }
+  if (refs.modalResultPanel) {
+    refs.modalResultPanel.classList.remove("tier-a", "tier-b", "tier-c", "tier-d", "tier-e", "lastone-result", "show-congrats");
+    if (hasLastOne) refs.modalResultPanel.classList.add("lastone-result", "show-congrats");
+    else if (tier === 1) refs.modalResultPanel.classList.add("tier-a", "show-congrats");
+    else if (tier === 2) refs.modalResultPanel.classList.add("tier-b", "show-congrats");
+    else if (tier === 3) refs.modalResultPanel.classList.add("tier-c");
+    else if (tier === 4) refs.modalResultPanel.classList.add("tier-d");
+    else refs.modalResultPanel.classList.add("tier-e");
 
-    if (refs.modalStagePeel) refs.modalStagePeel.style.display = "none";
-    if (refs.modalStageResult) refs.modalStageResult.style.display = "block";
-
-    if (refs.modalResultPanel) {
-      refs.modalResultPanel.classList.remove("tier-a", "tier-b", "tier-c", "tier-d", "tier-e", "lastone-result", "show-congrats");
-      if (hasLastOne) refs.modalResultPanel.classList.add("lastone-result", "show-congrats");
-      else if (tier === 1) refs.modalResultPanel.classList.add("tier-a", "show-congrats");
-      else if (tier === 2) refs.modalResultPanel.classList.add("tier-b", "show-congrats");
-      else if (tier === 3) refs.modalResultPanel.classList.add("tier-c");
-      else if (tier === 4) refs.modalResultPanel.classList.add("tier-d");
-      else refs.modalResultPanel.classList.add("tier-e");
-
-      refs.modalResultPanel.classList.add("show");
-    }
-
-    if (hasLastOne) {
-      playLastOneSound();
-      burstConfetti(180);
-    } else if (tier === 1 || tier === 2) {
-      playFanfare();
-      burstConfetti(120);
-    } else {
-      playLowTierSound(tierText);
-      burstConfetti(40);
-    }
+    refs.modalResultPanel.classList.add("show");
   }
+
+  let tierBadge = refs.modalResultPanel?.querySelector(".result-tier-badge");
+  if (!tierBadge && refs.modalResultPanel) {
+    tierBadge = document.createElement("div");
+    tierBadge.className = "result-tier-badge";
+    refs.modalResultPanel.prepend(tierBadge);
+  }
+  if (tierBadge) {
+    tierBadge.textContent = tierText || "";
+  }
+
+  if (refs.modalResultImg) {
+    refs.modalResultImg.src = prizeImg || CONFIG.defaultEmptyResultImage;
+    refs.modalResultImg.classList.remove("is-hidden");
+  }
+
+  if (refs.modalRevealBig) refs.modalRevealBig.textContent = prizeName || "";
+  if (refs.modalRevealSmall) {
+    refs.modalRevealSmall.innerHTML = `
+      <div class="result-meta-line">종이 ${ticketNumber}</div>
+      <div class="result-meta-line result-who">${who || "참여자"}</div>
+    `;
+  }
+
+ if (isFreshReveal) {
+  runTierEffects({ tier, hasLastOne });
+
+  if (hasLastOne) {
+    playLastOneSound();
+    burstConfetti(240);
+    burstGlobalConfetti(500);
+  } else if (tier === 1) {
+    playFanfare();
+    burstConfetti(200);
+    burstGlobalConfetti(400);
+  } else if (tier === 2) {
+    playFanfare();
+    burstConfetti(120);
+  } else if (tier === 3) {
+    playLowTierSound(tierText);
+    burstConfetti(80);
+  } else if (tier === 4) {
+    playLowTierSound(tierText);
+    burstConfetti(48);
+  } else {
+    playLowTierSound(tierText);
+    // 오지상은 컨페티 없음
+  }
+} else {
+  clearModalEffects();
+  stopAllRewardSounds();
+}
+}
 
   function showResultPanel() {
-    if (!pendingRevealData) return;
-    commitPendingDrawIfNeeded();
-    fillResultPanel(pendingRevealData);
-  }
+  if (!pendingRevealData) return;
+  commitPendingDrawIfNeeded();
+  isFreshReveal = true;
+  fillResultPanel(pendingRevealData);
+}
 
   function finishPeelReveal() {
     if (peelDone) return;
@@ -2062,17 +2250,19 @@ function editCurrentViewingWinnerName() {
   }
 
   renderAll();
-  saveStoreDebounced();
+saveStoreDebounced();
 
-  fillResultPanel({
-    prizeName: targetLog.displayPrizeName || targetLog.prizeName || "",
-    tierText: targetLog.displayTierText || targetLog.prizeId || "",
-    ticketNumber: targetLog.ticketNumber,
-    who: targetLog.who,
-    prizeImg: targetLog.prizeImg || "",
-    tier: targetLog.tier || 5,
-    hasLastOne: !!targetLog.hasLastOne,
-  });
+isFreshReveal = false;
+
+fillResultPanel({
+  prizeName: targetLog.displayPrizeName || targetLog.prizeName || "",
+  tierText: targetLog.displayTierText || targetLog.prizeId || "",
+  ticketNumber: targetLog.ticketNumber,
+  who: targetLog.who,
+  prizeImg: targetLog.prizeImg || "",
+  tier: targetLog.tier || 5,
+  hasLastOne: !!targetLog.hasLastOne,
+});
 
   if (refs.modalTitle) refs.modalTitle.textContent = "당첨 결과 보기";
   if (refs.modalSub) refs.modalSub.textContent = targetLog.isManual ? "관리자 수동 처리 기록" : "";
@@ -2086,6 +2276,7 @@ function openWinLogResult(log) {
   openModal();
 
   currentViewingLogTs = log.ts;
+  isFreshReveal = false;
 
   fillResultPanel({
     prizeName: log.displayPrizeName || log.prizeName || "",
