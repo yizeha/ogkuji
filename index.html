@@ -357,15 +357,24 @@
         </div>
 
         <div class="admin-section">
-          <div class="admin-section-title">관리</div>
+  <div class="admin-section-title">관리</div>
 
-          <div class="admin-action-grid">
-            <button class="btn primary" id="btnUndo" type="button">되돌리기</button>
-            <button class="btn" id="btnSave" type="button">저장</button>
-            <button class="btn" id="btnLoad" type="button">불러오기</button>
-            <button class="btn danger" id="btnReset" type="button">전체 초기화</button>
-          </div>
-        </div>
+  <div class="admin-action-grid">
+    <button class="btn primary" id="btnUndo" type="button">직전 상태 복구</button>
+    <button class="btn" id="btnSave" type="button">저장</button>
+    <button class="btn" id="btnLoad" type="button">불러오기</button>
+    <button class="btn warn" id="btnEmergencyRestore" type="button">긴급 복구</button>
+    <button class="btn" id="btnExportJson" type="button">JSON 내보내기</button>
+    <button class="btn" id="btnImportJson" type="button">JSON 가져오기</button>
+    <button class="btn danger" id="btnReset" type="button">전체 초기화</button>
+  </div>
+
+  <div id="saveStatusText" style="margin-top:10px; font-size:12px; color:rgba(255,255,255,.7);">
+    저장 기록 없음
+  </div>
+
+  <input id="jsonImportInput" type="file" accept="application/json" style="display:none;" />
+</div>
 
       </div>
     </aside>

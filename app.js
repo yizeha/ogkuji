@@ -411,13 +411,14 @@
   }
 
   function saveLocalBackup() {
-    try {
-      localStorage.setItem(LOCAL_MASTER_KEY, JSON.stringify(exportMasterPayload()));
-      localStorage.setItem(LOCAL_LAST_BOARD_KEY, store.currentBoardId || "");
-    } catch (e) {
-      console.error("[KUJI] local backup save error:", e);
-    }
+  try {
+    localStorage.setItem(LOCAL_MASTER_KEY, JSON.stringify(exportMasterPayload()));
+    localStorage.setItem(LOCAL_LAST_BOARD_KEY, store.currentBoardId || "");
+    updateSaveStatusText(`로컬 백업 저장: ${new Date().toLocaleString("ko-KR")}`);
+  } catch (e) {
+    console.error("[KUJI] local backup save error:", e);
   }
+}
 
   function loadLocalBackup() {
     try {
@@ -456,7 +457,8 @@
       if (error) throw error;
 
       DB.lastSavedAt = nowTs();
-      return true;
+updateSaveStatusText(`마지막 저장: ${new Date(DB.lastSavedAt).toLocaleString("ko-KR")}`);
+return true;
     } catch (e) {
       console.error("[KUJI] remote save error:", e);
       return false;
@@ -509,6 +511,10 @@
     btnUndo: $("#btnUndo"),
     btnSave: $("#btnSave"),
     btnLoad: $("#btnLoad"),
+    btnEmergencyRestore: $("#btnEmergencyRestore"),
+btnExportJson: $("#btnExportJson"),
+btnImportJson: $("#btnImportJson"),
+jsonImportInput: $("#jsonImportInput"),
 
     winList: $("#winList"),
     prizeList: $("#prizeList"),
@@ -695,12 +701,7 @@ let btnEditWinnerName = null;
     return state.prizes.find((p) => p.id === "OJI") || createDefaultOjiPrize();
   }
 
-  function isOjiResultNumber(resultNumber) {
-    return !state.prizes.some((p) => {
-      if (p.id === "OJI") return false;
-      return Array.isArray(p.numbers) && p.numbers.includes(resultNumber);
-    });
-  }
+
 
   function getOpenedCount() {
     return Object.keys(state.used).length;
@@ -1139,7 +1140,7 @@ let btnEditWinnerName = null;
       if (item.tier === 3) row.classList.add("tier-c");
       if (item.tier === 4) row.classList.add("tier-d");
       if (item.tier === 5) row.classList.add("tier-e");
-      if (item.prizeId === "오지상") row.classList.add("tier-oji");
+      if (String(item.prizeId || "").includes("오지상")) row.classList.add("tier-oji");
 
       const tier = document.createElement("div");
       tier.className = "wintier";
@@ -1989,41 +1990,73 @@ function editCurrentViewingWinnerName() {
 
   pushHistory();
 
+  const ticketNumber = targetLog.ticketNumber;
+  const resultNumber = targetLog.resultNumber;
+  const isOjiMileage = String(targetLog.displayTierText || targetLog.prizeId || "").includes("오지상");
+
+  // 1) 현재 기록 1건만 닉네임 변경
   targetLog.who = trimmed;
 
-  // 메인 로그 전체에서 같은 사람 이름 변경
-  state.logs.forEach((log) => {
-    if (String(log.who || "").trim() === oldName) {
-      log.who = trimmed;
-    }
-  });
+  // 2) 현재 보드 로그에서도 같은 ts 기록만 변경
+  const currentBoard = getCurrentBoard();
+  const currentBoardLogs = currentBoard?.state?.logs;
+  if (Array.isArray(currentBoardLogs)) {
+    const sameLog = currentBoardLogs.find((log) => log.ts === currentViewingLogTs);
+    if (sameLog) sameLog.who = trimmed;
+  }
 
-  // 각 보드 로그에서도 이름 변경
-  Object.values(store.boards).forEach((boardObj) => {
-    const logs = boardObj?.state?.logs;
-    if (Array.isArray(logs)) {
-      logs.forEach((log) => {
-        if (String(log.who || "").trim() === oldName) {
-          log.who = trimmed;
+  // 3) 오지상 당첨이면 그 1건의 마일리지 로그만 이동
+  if (isOjiMileage) {
+    const oldMember = findMemberByName(oldName);
+    const newMember = ensureMemberByName(trimmed);
+
+    if (oldMember && newMember) {
+      const mileageLogIndex = oldMember.mileageLogs.findIndex((log) =>
+        Number(log.ticketNumber) === Number(ticketNumber) &&
+        Number(log.resultNumber) === Number(resultNumber) &&
+        Number(log.amount) === Number(CONFIG.defaultMileagePerOji)
+      );
+
+      if (mileageLogIndex >= 0) {
+        const [mileageLog] = oldMember.mileageLogs.splice(mileageLogIndex, 1);
+
+        oldMember.mileage -= Number(mileageLog.amount || 0);
+        newMember.mileage += Number(mileageLog.amount || 0);
+
+        newMember.mileageLogs.unshift({
+          ...mileageLog,
+        });
+
+        if (newMember.mileageLogs.length > CONFIG.maxMemberLogs) {
+          newMember.mileageLogs = newMember.mileageLogs.slice(0, CONFIG.maxMemberLogs);
         }
-      });
+      }
     }
-  });
+  }
 
-  // 회원 데이터(당첨내역 + 마일리지) 통째로 이동/합치기
-  moveMemberDataToAnotherName(oldName, trimmed);
+  // 4) 해당 회원의 winLogs에서도 같은 기록 1건만 이동
+  const oldMember = findMemberByName(oldName);
+  const newMember = ensureMemberByName(trimmed);
 
-  // 회원 내부 winLogs 의 who 값도 같이 변경
-  store.members.list.forEach((member) => {
-    if (Array.isArray(member.winLogs)) {
-      member.winLogs.forEach((log) => {
-        if (String(log.who || "").trim() === oldName) {
-          log.who = trimmed;
-        }
-      });
+  if (oldMember && newMember) {
+    const winLogIndex = oldMember.winLogs.findIndex((log) =>
+      Number(log.ticketNumber) === Number(ticketNumber) &&
+      Number(log.resultNumber) === Number(resultNumber) &&
+      Number(log.ts) === Number(currentViewingLogTs)
+    );
+
+    if (winLogIndex >= 0) {
+      const [winLog] = oldMember.winLogs.splice(winLogIndex, 1);
+      winLog.who = trimmed;
+
+      newMember.winLogs.unshift(winLog);
+      if (newMember.winLogs.length > CONFIG.maxMemberLogs) {
+        newMember.winLogs = newMember.winLogs.slice(0, CONFIG.maxMemberLogs);
+      }
     }
-  });
+  }
 
+  // 5) 입력칸 이름도 현재 이름이면 같이 변경
   if (refs.drawNicknameInput?.value?.trim() === oldName) {
     refs.drawNicknameInput.value = trimmed;
   }
@@ -2215,27 +2248,7 @@ function openWinLogResult(log) {
     });
   }
 
-  function resolveDrawerName() {
-    const manualName = String(refs.drawNicknameInput?.value || "").trim();
-    if (manualName) {
-      ensureMemberByName(manualName);
-      return { who: manualName, fromQueue: false };
-    }
 
-    const selectedMember = getSelectedMember();
-    if (selectedMember?.name) {
-      if (refs.drawNicknameInput) refs.drawNicknameInput.value = selectedMember.name;
-      return { who: selectedMember.name, fromQueue: false };
-    }
-
-    const queueName = String(state.queue?.[0]?.name || "").trim();
-    if (queueName) {
-      ensureMemberByName(queueName);
-      return { who: queueName, fromQueue: true };
-    }
-
-    return { who: "참여자", fromQueue: false };
-  }
 
   function resolveCurrentDraw() {
     if (typeof currentDrawResolver === "function") {
@@ -2330,6 +2343,12 @@ function openWinLogResult(log) {
     renderMembers();
     saveStoreDebounced();
   }
+
+  function updateSaveStatusText(text) {
+  const el = $("#saveStatusText");
+  if (!el) return;
+  el.textContent = text;
+}
 
   function moveMemberDataToAnotherName(oldName, newName) {
   const oldMember = findMemberByName(oldName);
@@ -2609,6 +2628,101 @@ function openWinLogResult(log) {
       return false;
     }
   }
+
+  function exportJsonBackup() {
+  try {
+    const payload = exportMasterPayload();
+    const blob = new Blob(
+      [JSON.stringify(payload, null, 2)],
+      { type: "application/json" }
+    );
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+
+    a.href = url;
+    a.download = `kuji-backup-${stamp}.json`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+
+    alert("JSON 백업 파일이 저장되었습니다.");
+  } catch (e) {
+    console.error("[KUJI] exportJsonBackup error:", e);
+    alert("JSON 내보내기에 실패했습니다.");
+  }
+}
+
+async function importJsonBackup(file) {
+  if (!file) return;
+
+  const reader = new FileReader();
+
+  reader.onload = async () => {
+    try {
+      const raw = String(reader.result || "");
+      const parsed = JSON.parse(raw);
+
+      if (!parsed || typeof parsed !== "object") {
+        throw new Error("잘못된 JSON 형식");
+      }
+
+      if (!confirm("이 백업 파일로 현재 데이터를 덮어쓸까요?")) return;
+
+      pushHistory();
+
+      applyMasterPayload(parsed);
+      rebuildAssignmentsIfNeeded();
+      rebuildBoardSelect();
+      applyBoardVisual();
+      buildBoard(state.settings.totalTickets);
+      renderAll();
+
+      saveLocalBackup();
+      await saveRemoteNow();
+
+      alert("JSON 백업 파일을 불러왔습니다.");
+    } catch (e) {
+      console.error("[KUJI] importJsonBackup error:", e);
+      alert("JSON 가져오기에 실패했습니다. 파일 형식을 확인해주세요.");
+    } finally {
+      if (refs.jsonImportInput) refs.jsonImportInput.value = "";
+    }
+  };
+
+  reader.readAsText(file, "utf-8");
+}
+
+async function emergencyRestoreFromLocal() {
+  try {
+    const local = loadLocalBackup();
+    if (!local) {
+      alert("로컬 백업이 없습니다.");
+      return;
+    }
+
+    if (!confirm("localStorage 백업으로 현재 데이터를 복구할까요?")) return;
+
+    pushHistory();
+
+    applyMasterPayload(local);
+    rebuildAssignmentsIfNeeded();
+    rebuildBoardSelect();
+    applyBoardVisual();
+    buildBoard(state.settings.totalTickets);
+    renderAll();
+
+    await saveRemoteNow();
+
+    alert("로컬 백업으로 복구했습니다.");
+  } catch (e) {
+    console.error("[KUJI] emergencyRestoreFromLocal error:", e);
+    alert("긴급 복구에 실패했습니다.");
+  }
+}
+
 
   function saveStoreDebounced() {
     try {
@@ -2976,6 +3090,19 @@ function openWinLogResult(log) {
 
   refs.btnMileageAdd?.addEventListener("click", () => adjustSelectedMemberMileage("add"));
   refs.btnMileageUse?.addEventListener("click", () => adjustSelectedMemberMileage("use"));
+
+  refs.btnEmergencyRestore?.addEventListener("click", emergencyRestoreFromLocal);
+
+refs.btnExportJson?.addEventListener("click", exportJsonBackup);
+
+refs.btnImportJson?.addEventListener("click", () => {
+  refs.jsonImportInput?.click();
+});
+
+refs.jsonImportInput?.addEventListener("change", (e) => {
+  const file = e.target.files?.[0];
+  importJsonBackup(file);
+});
 
   refs.btnMemberSearch?.addEventListener("click", () => {
     state.memberSearchKeyword = String(refs.memberSearchInput?.value || "").trim();

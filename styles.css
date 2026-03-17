@@ -1339,6 +1339,10 @@ label{
   border-color: rgba(0,176,154,.55);
   background: rgba(0,176,154,.14);
 }
+.btn.warn{
+  border-color: rgba(255,179,71,.55);
+  background: rgba(255,179,71,.14);
+}
 .btn.danger{
   border-color: rgba(255,68,68,.55);
   background: rgba(255,68,68,.14);
