@@ -7,12 +7,12 @@
 
   <link rel="stylesheet" href="./styles.css" />
   <link href="https://fonts.googleapis.com/css2?family=Bangers&family=Luckiest+Guy&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
 
 <body>
   <div class="app" id="appRoot">
 
-    <!-- 상단 -->
     <header class="topbar">
       <div class="topbar-left">
         <img
@@ -27,9 +27,7 @@
       <div class="topbar-center">
         <div class="top-logo-wrap">
           <div class="top-dots left">
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </div>
 
           <img
@@ -41,35 +39,32 @@
           />
 
           <div class="top-dots right">
-            <span></span>
-            <span></span>
-            <span></span>
+            <span></span><span></span><span></span>
           </div>
         </div>
       </div>
 
       <div class="topbar-right">
-  <div class="sound-control">
-    <button class="sound-btn" id="btnToggleSound" type="button">🔊 사운드</button>
-    <input
-      class="sound-range"
-      id="soundVolumeRange"
-      type="range"
-      min="0"
-      max="100"
-      step="1"
-      value="35"
-    />
-  </div>
+        <div class="sound-control">
+          <button class="sound-btn" id="btnToggleSound" type="button">🔊 사운드</button>
+          <input
+            class="sound-range"
+            id="soundVolumeRange"
+            type="range"
+            min="0"
+            max="100"
+            step="1"
+            value="35"
+          />
+        </div>
 
-  <button class="member-btn" id="btnToggleMember" type="button">회원 패널</button>
-  <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
-</div>
+        <button class="member-btn" id="btnToggleMember" type="button">회원 패널</button>
+        <button class="mode-btn" id="btnToggleMode" type="button">방송 모드</button>
+      </div>
     </header>
 
     <section class="layout">
 
-      <!-- LEFT -->
       <aside class="panel left">
         <div class="panel-head">
           <div class="panel-title">당첨 결과</div>
@@ -97,7 +92,6 @@
         </div>
       </aside>
 
-      <!-- CENTER -->
       <main class="panel center">
         <div class="boardbar">
           <div class="boardbar-left">
@@ -155,24 +149,12 @@
           <div class="control-left">
             <div class="control-group nickname-group">
               <label class="control-label" for="drawNicknameInput">닉네임</label>
-              <input
-                class="control-input"
-                id="drawNicknameInput"
-                type="text"
-                placeholder="참여자"
-              />
+              <input class="control-input" id="drawNicknameInput" type="text" placeholder="참여자" />
             </div>
 
             <div class="control-group random-group">
               <label class="control-label" for="randomCountInput">랜덤</label>
-              <input
-                class="control-input small"
-                id="randomCountInput"
-                type="number"
-                min="1"
-                step="1"
-                placeholder="장수"
-              />
+              <input class="control-input small" id="randomCountInput" type="number" min="1" step="1" placeholder="장수" />
               <button class="control-btn" id="btnRandomPick" type="button">랜덤</button>
             </div>
           </div>
@@ -186,7 +168,6 @@
         <div class="board" id="board"></div>
       </main>
 
-      <!-- RIGHT -->
       <aside class="panel right">
         <div class="panel-head">
           <div class="panel-title">상품 목록</div>
@@ -200,7 +181,6 @@
 
     </section>
 
-    <!-- 관리자 패널 -->
     <aside class="admin" id="adminPanel">
       <div class="admin-head">
         <div class="admin-title">관리자 패널</div>
@@ -209,19 +189,13 @@
 
       <div class="admin-body">
 
-        <!-- 상품 추가 -->
         <div class="admin-section">
           <div class="admin-section-title">상품 추가</div>
 
           <div class="admin-col">
             <div class="field">
               <label for="prizeNameInput">상품 이름</label>
-              <input
-                class="input"
-                id="prizeNameInput"
-                type="text"
-                placeholder="예: 피규어"
-              />
+              <input class="input" id="prizeNameInput" type="text" placeholder="예: 피규어" />
             </div>
 
             <div class="admin-row">
@@ -238,25 +212,13 @@
 
               <div class="field small">
                 <label for="prizeStockInput">수량</label>
-                <input
-                  class="input"
-                  id="prizeStockInput"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value="1"
-                />
+                <input class="input" id="prizeStockInput" type="number" min="1" step="1" value="1" />
               </div>
             </div>
 
             <div class="field">
               <label for="prizeImgUrlInput">이미지 URL</label>
-              <input
-                class="input"
-                id="prizeImgUrlInput"
-                type="text"
-                placeholder="https://pub-xxxxx.r2.dev/prizes/a1.png"
-              />
+              <input class="input" id="prizeImgUrlInput" type="text" placeholder="https://pub-xxxxx.r2.dev/prizes/a1.png" />
             </div>
 
             <div class="field buttons full">
@@ -265,39 +227,23 @@
           </div>
         </div>
 
-        <!-- 라스트원 상품 설정 -->
         <div class="admin-section">
           <div class="admin-section-title">라스트원 상품 설정</div>
 
           <div class="admin-col">
             <div class="field">
               <label for="lastOneNameInput">상품 이름</label>
-              <input
-                class="input"
-                id="lastOneNameInput"
-                type="text"
-                placeholder="예: 피규어"
-              />
+              <input class="input" id="lastOneNameInput" type="text" placeholder="예: 피규어" />
             </div>
 
             <div class="field">
               <label for="lastOneDescInput">설명</label>
-              <input
-                class="input"
-                id="lastOneDescInput"
-                type="text"
-                placeholder="예: 마지막 뽑기 오픈 시 지급"
-              />
+              <input class="input" id="lastOneDescInput" type="text" placeholder="예: 마지막 뽑기 오픈 시 지급" />
             </div>
 
             <div class="field">
               <label for="lastOneImgUrlInput">이미지 URL</label>
-              <input
-                class="input"
-                id="lastOneImgUrlInput"
-                type="text"
-                placeholder="https://pub-xxxxx.r2.dev/prizes/lastone.png"
-              />
+              <input class="input" id="lastOneImgUrlInput" type="text" placeholder="https://pub-xxxxx.r2.dev/prizes/lastone.png" />
             </div>
 
             <div class="field buttons full">
@@ -310,69 +256,43 @@
           </div>
         </div>
 
-        <!-- 기본 설정 -->
         <div class="admin-section">
           <div class="admin-section-title">기본 설정</div>
 
           <div class="admin-col">
             <div class="field">
               <label for="kujiTitleInput">쿠지판 이름</label>
-              <input
-                class="input"
-                id="kujiTitleInput"
-                type="text"
-                placeholder="예: 오지상 쿠지"
-              />
+              <input class="input" id="kujiTitleInput" type="text" placeholder="예: 오지상 쿠지" />
             </div>
 
             <div class="field">
               <label for="priceInput">1회 가격</label>
-              <input
-                class="input"
-                id="priceInput"
-                type="text"
-                placeholder="예: 14,000원"
-              />
+              <input class="input" id="priceInput" type="text" placeholder="예: 14,000원" />
             </div>
 
             <div class="field">
               <label for="totalTicketsInput">전체 뽑기 수</label>
-              <input
-                class="input"
-                id="totalTicketsInput"
-                type="number"
-                min="1"
-                step="1"
-              />
+              <input class="input" id="totalTicketsInput" type="number" min="1" step="1" />
             </div>
 
             <div class="field buttons full">
-              <button class="btn ok" id="btnApplyBasicSettings" type="button">
-                설정 적용
-              </button>
+              <button class="btn ok" id="btnApplyBasicSettings" type="button">설정 적용</button>
             </div>
           </div>
         </div>
 
-        <!-- 관리자 상품 목록 -->
         <div class="admin-section">
           <div class="admin-section-title">현재 상품 목록</div>
           <div class="admin-prize-manage-list" id="adminPrizeList"></div>
         </div>
 
-        <!-- 상품 수정 -->
         <div class="admin-section" id="editPrizeSection" style="display:none;">
           <div class="admin-section-title">상품 수정</div>
 
           <div class="admin-col">
             <div class="field">
               <label for="editPrizeNameInput">상품 이름</label>
-              <input
-                class="input"
-                id="editPrizeNameInput"
-                type="text"
-                placeholder="예: 피규어"
-              />
+              <input class="input" id="editPrizeNameInput" type="text" placeholder="예: 피규어" />
             </div>
 
             <div class="admin-row">
@@ -389,25 +309,8 @@
 
               <div class="field small">
                 <label for="editPrizeStockInput">수량</label>
-                <input
-                  class="input"
-                  id="editPrizeStockInput"
-                  type="number"
-                  min="1"
-                  step="1"
-                  value="1"
-                />
+                <input class="input" id="editPrizeStockInput" type="number" min="1" step="1" value="1" />
               </div>
-            </div>
-
-            <div class="field">
-              <label for="editPrizeImgInput">이미지 변경 (선택)</label>
-              <input
-                class="input"
-                id="editPrizeImgInput"
-                type="file"
-                accept="image/*"
-              />
             </div>
 
             <div class="admin-action-grid">
@@ -415,16 +318,12 @@
               <button class="btn" id="btnCancelPrizeEdit" type="button">취소</button>
             </div>
 
-            <div
-              id="editPrizeHint"
-              style="font-size:12px; color:rgba(255,255,255,.68); line-height:1.5;"
-            >
+            <div id="editPrizeHint" style="font-size:12px; color:rgba(255,255,255,.68); line-height:1.5;">
               이미 추첨이 시작된 뒤에는 수량 변경을 막아두었습니다.
             </div>
           </div>
         </div>
 
-        <!-- 쿠지판 변경 -->
         <div class="admin-section">
           <div class="admin-section-title">쿠지판 변경</div>
 
@@ -436,32 +335,17 @@
 
             <div class="field">
               <label for="newBoardNameInput">새 쿠지판 이름</label>
-              <input
-                class="input"
-                id="newBoardNameInput"
-                type="text"
-                placeholder="예: 귀멸 쿠지"
-              />
+              <input class="input" id="newBoardNameInput" type="text" placeholder="예: 귀멸 쿠지" />
             </div>
 
             <div class="field">
               <label for="boardBgUrlInput">배경 이미지 URL</label>
-              <input
-                class="input"
-                id="boardBgUrlInput"
-                type="text"
-                placeholder="https://pub-xxxxx.r2.dev/boards/bg.png"
-              />
+              <input class="input" id="boardBgUrlInput" type="text" placeholder="https://pub-xxxxx.r2.dev/boards/bg.png" />
             </div>
 
             <div class="field">
               <label for="boardPaperUrlInput">뽑기 종이 이미지 URL</label>
-              <input
-                class="input"
-                id="boardPaperUrlInput"
-                type="text"
-                placeholder="https://pub-xxxxx.r2.dev/boards/paper.png"
-              />
+              <input class="input" id="boardPaperUrlInput" type="text" placeholder="https://pub-xxxxx.r2.dev/boards/paper.png" />
             </div>
 
             <div class="admin-action-grid board-action-grid">
@@ -472,7 +356,6 @@
           </div>
         </div>
 
-        <!-- 관리 버튼 -->
         <div class="admin-section">
           <div class="admin-section-title">관리</div>
 
@@ -486,88 +369,78 @@
 
       </div>
     </aside>
-<!-- 회원 패널 -->
-<aside class="member-panel" id="memberPanel">
-  <div class="member-head">
-    <div class="member-title">회원 패널</div>
-    <button class="member-close" id="btnCloseMember" type="button">닫기</button>
-  </div>
 
-  <div class="member-body">
-    <div class="member-section">
-      <div class="member-section-title">회원 등록 / 선택</div>
-
-      <div class="member-col">
-        <div class="field">
-          <label for="memberNameInput">닉네임</label>
-          <input
-            class="input"
-            id="memberNameInput"
-            type="text"
-            placeholder="예: 오지"
-          />
-        </div>
-
-        <div class="member-action-grid">
-          <button class="btn ok" id="btnAddMember" type="button">회원 등록</button>
-          <button class="btn" id="btnUseMemberForDraw" type="button">닉네임 칸에 넣기</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="member-section">
-      <div class="member-section-title">회원 검색 / 목록</div>
-
-      <div class="member-search-row">
-        <input
-          class="input"
-          id="memberSearchInput"
-          type="text"
-          placeholder="닉네임 검색"
-        />
-        <button class="btn" id="btnMemberSearch" type="button">검색</button>
+    <aside class="member-panel" id="memberPanel">
+      <div class="member-head">
+        <div class="member-title">회원 패널</div>
+        <button class="member-close" id="btnCloseMember" type="button">닫기</button>
       </div>
 
-      <div class="member-list" id="memberList" style="margin-top:10px;"></div>
-    </div>
+      <div class="member-body">
+        <div class="member-section">
+          <div class="member-section-title">회원 등록 / 선택</div>
 
-    <div class="member-section">
-      <div class="member-section-title">회원 상세</div>
-      <div class="member-detail-empty" id="memberDetailEmpty">회원을 선택해주세요.</div>
+          <div class="member-col">
+            <div class="field">
+              <label for="memberNameInput">닉네임</label>
+              <input class="input" id="memberNameInput" type="text" placeholder="예: 오지" />
+            </div>
 
-      <div class="member-detail" id="memberDetail" style="display:none;">
-        <div class="member-detail-top">
-          <div>
-            <div class="member-detail-name" id="memberDetailName">-</div>
-            <div class="member-detail-sub" id="memberDetailSub">-</div>
-          </div>
-
-          <div class="member-mileage-box">
-            <div class="member-mileage-label">총 마일리지</div>
-            <div class="member-mileage-value" id="memberDetailMileage">0원</div>
+            <div class="member-action-grid">
+              <button class="btn ok" id="btnAddMember" type="button">회원 등록</button>
+              <button class="btn" id="btnUseMemberForDraw" type="button">닉네임 칸에 넣기</button>
+            </div>
           </div>
         </div>
 
-        <div class="member-action-grid">
-          <button class="btn primary" id="btnRenameMember" type="button">닉네임 수정</button>
-          <button class="btn ok" id="btnMileageAdd" type="button">마일리지 추가</button>
-          <button class="btn warn" id="btnMileageUse" type="button">마일리지 차감</button>
-          <button class="btn danger" id="btnDeleteMember" type="button">회원 삭제</button>
+        <div class="member-section">
+          <div class="member-section-title">회원 검색 / 목록</div>
+
+          <div class="member-search-row">
+            <input class="input" id="memberSearchInput" type="text" placeholder="닉네임 검색" />
+            <button class="btn" id="btnMemberSearch" type="button">검색</button>
+          </div>
+
+          <div class="member-list" id="memberList" style="margin-top:10px;"></div>
         </div>
 
-        <div class="member-log-wrap">
-          <div class="member-log-title">마일리지 적립 내역</div>
-          <div class="member-log-list" id="memberMileageLogList"></div>
-        </div>
+        <div class="member-section">
+          <div class="member-section-title">회원 상세</div>
+          <div class="member-detail-empty" id="memberDetailEmpty">회원을 선택해주세요.</div>
 
-        <div class="member-log-wrap">
-          <div class="member-log-title">당첨 내역</div>
-          <div class="member-log-list" id="memberWinLogList"></div>
+          <div class="member-detail" id="memberDetail" style="display:none;">
+            <div class="member-detail-top">
+              <div>
+                <div class="member-detail-name" id="memberDetailName">-</div>
+                <div class="member-detail-sub" id="memberDetailSub">-</div>
+              </div>
+
+              <div class="member-mileage-box">
+                <div class="member-mileage-label">총 마일리지</div>
+                <div class="member-mileage-value" id="memberDetailMileage">0원</div>
+              </div>
+            </div>
+
+            <div class="member-action-grid">
+              <button class="btn primary" id="btnRenameMember" type="button">닉네임 수정</button>
+              <button class="btn ok" id="btnMileageAdd" type="button">마일리지 추가</button>
+              <button class="btn warn" id="btnMileageUse" type="button">마일리지 차감</button>
+              <button class="btn danger" id="btnDeleteMember" type="button">회원 삭제</button>
+            </div>
+
+            <div class="member-log-wrap">
+              <div class="member-log-title">마일리지 적립 내역</div>
+              <div class="member-log-list" id="memberMileageLogList"></div>
+            </div>
+
+            <div class="member-log-wrap">
+              <div class="member-log-title">당첨 내역</div>
+              <div class="member-log-list" id="memberWinLogList"></div>
+            </div>
+          </div>
         </div>
       </div>
-    </div>
-  </div>
-</aside>
+    </aside>
 
     <audio id="fanfare" src="./assets/fanfare.mp3" preload="auto"></audio>
     <audio id="peelSound" src="./assets/peel.mp3" preload="auto"></audio>
@@ -575,7 +448,6 @@
     <audio id="lowTierSound" src="./assets/low-tier.mp3" preload="auto"></audio>
   </div>
 
-  <!-- Draw Modal -->
   <div class="modal" id="drawModal" aria-hidden="true">
     <div class="modal-backdrop" id="modalBackdrop"></div>
 
@@ -588,12 +460,10 @@
       </div>
 
       <div class="modal-body">
-        <!-- 1단계: 스크래치/뜯기 창 -->
         <div class="modal-stage modal-stage-peel" id="modalStagePeel">
           <div class="modal-peel-wrap">
             <div class="modal-number-stage">
               <div class="modal-number" id="modalResultNumber"></div>
-
               <div class="modal-paper" id="modalPaper">
                 <img id="modalPaperImg" src="./assets/paper.png" alt="" />
               </div>
@@ -606,12 +476,10 @@
           </div>
         </div>
 
-        <!-- 2단계: 결과 창 -->
         <div class="modal-stage modal-stage-result" id="modalStageResult">
           <div class="modal-result-panel" id="modalResultPanel">
             <div class="reveal-big" id="modalRevealBig"></div>
             <div class="reveal-small" id="modalRevealSmall"></div>
-
             <div class="modal-media">
               <img id="modalResultImg" class="is-hidden" alt="결과 이미지" />
             </div>
@@ -623,7 +491,6 @@
     </div>
   </div>
 
-  <!-- 상품 미리보기 모달 -->
   <div class="preview-modal" id="previewModal" aria-hidden="true">
     <div class="preview-backdrop" id="previewBackdrop"></div>
 
