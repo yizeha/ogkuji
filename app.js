@@ -1151,12 +1151,16 @@ let isFreshReveal = false;
       main.className = "winmain";
 
       const name = document.createElement("div");
-      name.className = "winname";
-      name.textContent = `${item.prizeName} · 번호 ${item.resultNumber}`;
+name.className = "winname";
+name.textContent = item.isManual
+  ? `${item.prizeName} · 수동 지급`
+  : `${item.prizeName} · 번호 ${item.resultNumber}`;
 
-      const meta = document.createElement("div");
-      meta.className = "winmeta";
-      meta.textContent = `종이 ${item.ticketNumber} · 닉네임: ${item.who}${item.isManual ? " · 수동처리" : ""}`;
+const meta = document.createElement("div");
+meta.className = "winmeta";
+meta.textContent = item.isManual
+  ? `닉네임: ${item.who} · 수동처리`
+  : `종이 ${item.ticketNumber} · 닉네임: ${item.who}`;
 
       const time = document.createElement("div");
       time.className = "wintime";
@@ -1212,40 +1216,54 @@ let isFreshReveal = false;
       meta.appendChild(sub);
 
       const actions = document.createElement("div");
-      actions.className = "admin-prize-actions";
+actions.className = "admin-prize-actions";
 
-      const edit = document.createElement("button");
-      edit.type = "button";
-      edit.className = "admin-prize-edit";
-      edit.textContent = p.id === "OJI" ? "기본" : "수정";
+const manual = document.createElement("button");
+manual.type = "button";
+manual.className = "admin-prize-edit";
+manual.textContent = "수동당첨";
 
-      const del = document.createElement("button");
-      del.type = "button";
-      del.className = "admin-prize-delete";
-      del.textContent = p.id === "OJI" ? "기본" : "삭제";
+const edit = document.createElement("button");
+edit.type = "button";
+edit.className = "admin-prize-edit";
+edit.textContent = p.id === "OJI" ? "기본" : "수정";
 
-      if (p.id === "OJI") {
-        edit.disabled = true;
-        del.disabled = true;
-        edit.style.opacity = ".5";
-        del.style.opacity = ".5";
-        edit.style.cursor = "default";
-        del.style.cursor = "default";
-      } else {
-        edit.addEventListener("click", () => openPrizeEditSection(p.id));
-        del.addEventListener("click", () => {
-          if (!confirm(`${p.label} ${p.name} 상품을 삭제할까요?`)) return;
-          pushHistory();
-          state.prizes = state.prizes.filter((x) => x.id !== p.id);
-          if (state.editingPrizeId === p.id) closePrizeEditSection();
-          rebuildAssignments();
-          renderAll();
-          saveStoreDebounced();
-        });
-      }
+const del = document.createElement("button");
+del.type = "button";
+del.className = "admin-prize-delete";
+del.textContent = p.id === "OJI" ? "기본" : "삭제";
 
-      actions.appendChild(edit);
-      actions.appendChild(del);
+      manual.addEventListener("click", () => manualAwardPrize(p.id));
+
+if (p.id === "OJI") {
+  edit.disabled = true;
+  del.disabled = true;
+  edit.style.opacity = ".5";
+  del.style.opacity = ".5";
+  edit.style.cursor = "default";
+  del.style.cursor = "default";
+} else {
+  if (p.stock <= 0) {
+    manual.disabled = true;
+    manual.style.opacity = ".5";
+    manual.style.cursor = "default";
+  }
+
+  edit.addEventListener("click", () => openPrizeEditSection(p.id));
+  del.addEventListener("click", () => {
+    if (!confirm(`${p.label} ${p.name} 상품을 삭제할까요?`)) return;
+    pushHistory();
+    state.prizes = state.prizes.filter((x) => x.id !== p.id);
+    if (state.editingPrizeId === p.id) closePrizeEditSection();
+    rebuildAssignments();
+    renderAll();
+    saveStoreDebounced();
+  });
+}
+
+      actions.appendChild(manual);
+actions.appendChild(edit);
+actions.appendChild(del);
 
       item.appendChild(thumb);
       item.appendChild(meta);
@@ -1254,6 +1272,140 @@ let isFreshReveal = false;
       refs.adminPrizeList.appendChild(item);
     });
   }
+
+  function resolveManualWinnerName() {
+  const baseName =
+    String(refs.drawNicknameInput?.value || "").trim() ||
+    String(getSelectedMember()?.name || "").trim() ||
+    String(state.queue?.[0]?.name || "").trim();
+
+  const input = prompt("수동 당첨 닉네임을 입력해주세요.", baseName || "");
+  if (input === null) return null;
+
+  const who = String(input || "").trim();
+  if (!who) {
+    alert("닉네임을 입력해주세요.");
+    return null;
+  }
+
+  ensureMemberByName(who);
+  state.selectedMemberId = findMemberByName(who)?.id || state.selectedMemberId;
+  store.members.selectedId = state.selectedMemberId;
+
+  if (refs.drawNicknameInput) refs.drawNicknameInput.value = who;
+
+  return who;
+}
+
+function manualAwardPrize(prizeId) {
+  const prize = state.prizes.find((p) => p.id === prizeId);
+  if (!prize) {
+    alert("상품을 찾지 못했습니다.");
+    return;
+  }
+
+  const who = resolveManualWinnerName();
+  if (!who) return;
+
+  pushHistory();
+
+  const now = nowTs();
+  const timeText = new Date(now).toLocaleTimeString("ko-KR", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  let log = null;
+
+  if (prize.id === "OJI") {
+    const qtyRaw = prompt("오지상 수동 지급 개수를 입력해주세요.", "1");
+    if (qtyRaw === null) return;
+
+    const qty = Math.max(1, Math.floor(Number(qtyRaw) || 0));
+    if (!qty) {
+      alert("1 이상 입력해주세요.");
+      return;
+    }
+
+    const totalMileage = qty * CONFIG.defaultMileagePerOji;
+
+    addMileageToMember(
+      who,
+      totalMileage,
+      `오지상 수동 지급 x${qty}`,
+      { ticketNumber: "수동", resultNumber: "수동" }
+    );
+
+    log = {
+      ticketNumber: "수동",
+      resultNumber: "수동",
+      who,
+      prizeId: "오지상",
+      prizeName: `마일리지 적립 x${qty}`,
+      displayPrizeName: `마일리지 적립 x${qty}`,
+      displayTierText: "오지상",
+      prizeImg: prize.img || CONFIG.defaultEmptyResultImage,
+      hasLastOne: false,
+      tier: 5,
+      time: timeText,
+      ts: now,
+      isManual: true,
+    };
+  } else {
+    if (prize.stock <= 0) {
+      alert("남은 수량이 없습니다.");
+      return;
+    }
+
+    prize.stock = Math.max(0, prize.stock - 1);
+
+    log = {
+      ticketNumber: "수동",
+      resultNumber: "수동",
+      who,
+      prizeId: prize.label,
+      prizeName: prize.name,
+      displayPrizeName: prize.name,
+      displayTierText: prize.label,
+      prizeImg: prize.img || CONFIG.defaultEmptyResultImage,
+      hasLastOne: false,
+      tier: prize.tier,
+      time: timeText,
+      ts: now,
+      isManual: true,
+    };
+  }
+
+  state.logs.push(log);
+  if (state.logs.length > CONFIG.maxLogs) {
+    state.logs = state.logs.slice(-CONFIG.maxLogs);
+  }
+
+  addWinLogToMember(who, log);
+
+  renderAll();
+  saveStoreDebounced();
+
+  openModal();
+  currentViewingLogTs = log.ts;
+  isFreshReveal = false;
+
+  fillResultPanel({
+    prizeName: log.displayPrizeName || log.prizeName || "",
+    tierText: log.displayTierText || log.prizeId || "",
+    ticketNumber: log.ticketNumber,
+    who: log.who,
+    prizeImg: log.prizeImg || "",
+    tier: log.tier || 5,
+    hasLastOne: !!log.hasLastOne,
+  });
+
+  if (refs.modalTitle) refs.modalTitle.textContent = "수동 당첨 처리";
+  if (refs.modalSub) refs.modalSub.textContent = "관리자 수동 처리 기록";
+
+  showWinnerEditButton(true);
+}
 
   function renderMembers() {
     if (!refs.memberList) return;
