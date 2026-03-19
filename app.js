@@ -694,6 +694,37 @@ let isFreshReveal = false;
     if (!hasTicketMap || !prizeHasNumbers) rebuildAssignments();
   }
 
+  function assignNumbersToPrizeWithoutReset(prize) {
+  if (!prize || prize.id === "OJI") return false;
+
+  const total = state.settings.totalTickets;
+
+  const usedResultNumbers = new Set();
+
+  // 이미 다른 상품에 배정된 번호 수집
+  state.prizes.forEach((p) => {
+    if (p.id === "OJI") return;
+    if (!Array.isArray(p.numbers)) return;
+    p.numbers.forEach((num) => {
+      if (Number.isFinite(Number(num))) usedResultNumbers.add(Number(num));
+    });
+  });
+
+  // 아직 어떤 상품에도 배정 안 된 결과 번호 중에서만 추출
+  const availableResultNumbers = [];
+  for (let i = 1; i <= total; i++) {
+    if (!usedResultNumbers.has(i)) {
+      availableResultNumbers.push(i);
+    }
+  }
+
+  const picked = shuffle(availableResultNumbers).slice(0, prize.total);
+  prize.numbers = picked.sort((a, b) => a - b);
+  prize.stock = prize.total;
+
+  return picked.length === prize.total;
+}
+
   function findPrizeByResultNumber(resultNumber) {
     for (const p of state.prizes) {
       if (p.id === "OJI") continue;
@@ -3217,21 +3248,46 @@ async function emergencyRestoreFromLocal() {
 
     pushHistory();
 
-    state.prizes.push({
-      id: "P" + Date.now() + Math.random().toString(16).slice(2, 6),
-      tier: tierLabelToTierValue(label),
-      label,
-      name,
-      stock,
-      total: stock,
-      img: imgUrl,
-      numbers: [],
-    });
+const newPrize = {
+  id: "P" + Date.now() + Math.random().toString(16).slice(2, 6),
+  tier: tierLabelToTierValue(label),
+  label,
+  name,
+  stock,
+  total: stock,
+  img: imgUrl,
+  numbers: [],
+};
 
-    state.prizes.sort((a, b) => a.tier - b.tier);
-    rebuildAssignments();
-    renderAll();
-    saveStoreDebounced();
+const hasOpenedDraw = getOpenedCount() > 0;
+
+if (hasOpenedDraw) {
+  const remainTickets = state.settings.totalTickets - getOpenedCount();
+
+  const remainNonOjiStock = state.prizes
+    .filter((p) => p.id !== "OJI")
+    .reduce((sum, p) => sum + Math.max(0, Number(p.stock || 0)), 0);
+
+  if (remainNonOjiStock + stock > remainTickets) {
+    return alert("현재 남은 뽑기 수보다 상품 수량이 많아서 중간 추가할 수 없습니다.");
+  }
+
+  state.prizes.push(newPrize);
+  state.prizes.sort((a, b) => a.tier - b.tier);
+
+  const assignedOk = assignNumbersToPrizeWithoutReset(newPrize);
+  if (!assignedOk) {
+    state.prizes = state.prizes.filter((p) => p.id !== newPrize.id);
+    return alert("남은 결과 번호가 부족해서 상품을 추가할 수 없습니다.");
+  }
+} else {
+  state.prizes.push(newPrize);
+  state.prizes.sort((a, b) => a.tier - b.tier);
+  rebuildAssignments();
+}
+
+renderAll();
+saveStoreDebounced();
 
     if (refs.prizeNameInput) refs.prizeNameInput.value = "";
     if (refs.prizeStockInput) refs.prizeStockInput.value = "1";
